@@ -12,6 +12,10 @@ const schema = z.object({
 
 export type WaitlistState = { ok: boolean; message: string };
 
+// Single opt-in by default (just collect the email). Flip WAITLIST_DOUBLE_OPTIN=true
+// later (with a verified Resend domain) to send a confirmation email instead.
+const DOUBLE_OPTIN = process.env.WAITLIST_DOUBLE_OPTIN === "true";
+
 export async function joinWaitlist(
   _prev: WaitlistState,
   formData: FormData,
@@ -24,14 +28,12 @@ export async function joinWaitlist(
   if (!parsed.success) {
     return { ok: false, message: "Enter a valid email address." };
   }
-  // honeypot tripped: silently succeed
   if (parsed.data.company) {
-    return { ok: true, message: "You're on the list." };
+    return { ok: true, message: "You're on the list." }; // honeypot
   }
 
   const email = parsed.data.email.toLowerCase().trim();
 
-  // rate limit by IP (no-op if Upstash not configured)
   const h = await headers();
   const ip = (h.get("x-forwarded-for")?.split(",")[0] ?? "0.0.0.0").trim();
   if (!(await allowRequest(ip))) {
@@ -39,31 +41,21 @@ export async function joinWaitlist(
   }
 
   let token: string | null = null;
-  let alreadyConfirmed = false;
 
   if (process.env.DATABASE_URL) {
-    // imported lazily so the app builds/runs without a DB configured
     const { getDb, waitlistSignups } = await import("@tenet/db");
     const db = getDb();
     const [row] = await db
       .insert(waitlistSignups)
-      .values({ email })
+      .values({ email, status: DOUBLE_OPTIN ? "pending" : "subscribed" })
       .onConflictDoUpdate({ target: waitlistSignups.email, set: { email } })
-      .returning({
-        token: waitlistSignups.confirmToken,
-        status: waitlistSignups.status,
-      });
+      .returning({ token: waitlistSignups.confirmToken });
     token = row?.token ?? null;
-    alreadyConfirmed = row?.status === "confirmed";
   } else {
     console.log("[waitlist] (no DATABASE_URL) signup:", email);
   }
 
-  if (alreadyConfirmed) {
-    return { ok: true, message: "You're already on the list. See you at launch." };
-  }
-
-  if (token) {
+  if (DOUBLE_OPTIN && token) {
     try {
       await sendConfirmEmail(email, token);
     } catch (err) {
@@ -72,6 +64,5 @@ export async function joinWaitlist(
     return { ok: true, message: "Almost there. Check your inbox to confirm." };
   }
 
-  // No DB configured (local/dev): treat as success.
-  return { ok: true, message: "You're on the list. We'll be in touch." };
+  return { ok: true, message: "You're on the list. We'll email you at launch." };
 }
