@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, "..", ".."),
   },
+  // Transpile the workspace DB package (shipped as TS source).
+  transpilePackages: ["@tenet/db"],
 };
 
 export default nextConfig;
