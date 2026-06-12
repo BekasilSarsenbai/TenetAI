@@ -117,6 +117,9 @@
     .waitlist input{border:1px solid var(--line-2);border-radius:12px;background:rgba(255,255,255,.04)}
     .waitlist .btn{width:100%;justify-content:center}}
   .trust{margin-top:42px;display:flex;flex-direction:column;align-items:center;gap:22px}
+  /* works-with as its own strip below the hero (cleaner hero, logo-wall convention) */
+  .worksstrip{padding:60px 0;border-top:1px solid var(--line)}
+  .worksstrip .trust{margin-top:0}
   .trust .lbl{text-transform:uppercase;letter-spacing:.2em;font-size:11px;color:var(--faint);font-weight:600}
   .logos{display:flex;align-items:center;justify-content:center;gap:46px;flex-wrap:wrap;color:#9396a0}
   .logos .logo{display:inline-flex;align-items:center;gap:9px;opacity:.78;transition:.2s}

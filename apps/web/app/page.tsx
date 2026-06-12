@@ -1,5 +1,6 @@
 import { Nav } from "@/components/Nav";
 import { Hero } from "@/components/Hero";
+import { WorksWith } from "@/components/WorksWith";
 import { TraceDemo } from "@/components/TraceDemo";
 import { Synthesis } from "@/components/Synthesis";
 import { Roles } from "@/components/Roles";
@@ -13,6 +14,7 @@ export default function Home() {
     <>
       <Nav />
       <Hero />
+      <WorksWith />
       <TraceDemo />
       <Synthesis />
       <Roles />
