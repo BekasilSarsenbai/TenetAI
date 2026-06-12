@@ -97,16 +97,17 @@
   .waitlist input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--text);
     font-family:var(--sans);font-size:15.5px;padding:10px 14px}
   .waitlist input::placeholder{color:var(--faint)}
-  /* kill the browser autofill light background; keep the field dark + text readable */
-  .waitlist input:-webkit-autofill,
-  .waitlist input:-webkit-autofill:hover,
-  .waitlist input:-webkit-autofill:focus,
-  .waitlist input:-webkit-autofill:active{
+  /* neutralize browser autofill across ALL inputs: keep the field transparent
+     (blends with its container) and the text readable, no solid fill box */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill{
     -webkit-text-fill-color:var(--text);
-    -webkit-box-shadow:0 0 0 1000px #16191f inset;
-    box-shadow:0 0 0 1000px #16191f inset;
     caret-color:var(--text);
-    transition:background-color 9999s ease 0s;
+    transition:background-color 9999s ease 0s, color 9999s ease 0s;
   }
   .waitlist .btn{padding:11px 18px;font-size:15px;border-radius:10px;white-space:nowrap}
   .waitlist:focus-within{border-color:var(--text)}
