@@ -12,10 +12,60 @@ export const DEFAULT_LOCALE: Locale = "en";
 const en = {
   nav: {
     howItWorks: "How it works",
+    pricing: "Pricing",
     joinWaitlist: "Join the waitlist",
     openApp: "Open app",
     openMenu: "Open menu",
     switchLanguage: "Switch language",
+  },
+  pricing: {
+    h2: { a: "Simple, honest ", em: "pricing", b: "." },
+    sub: "Start free. Upgrade when Tenet saves you more time than it costs.",
+    monthly: "Monthly",
+    annual: "Annual",
+    save: "2 months free",
+    perMonth: "/mo",
+    perSeat: "/seat",
+    billedAnnually: "billed annually",
+    founding: "Founding offer — first 100 users keep Pro at $8/mo, forever.",
+    plans: {
+      free: {
+        name: "Free",
+        note: "Try the full loop, free forever.",
+        cta: "Join the waitlist",
+        features: [
+          "5 hours of recording / month",
+          "Record → transcript → summary",
+          "Every point linked to its source",
+          "7-day history",
+        ],
+      },
+      pro: {
+        name: "Pro",
+        badge: "Most popular",
+        note: "For people who live in calls.",
+        cta: "Join the waitlist",
+        features: [
+          "Everything in Free",
+          "~25 hours / month",
+          "Unlimited history & search",
+          "AI chat with your meetings",
+          "Export — Markdown / text / audio",
+        ],
+      },
+      team: {
+        name: "Team",
+        note: "Shared memory for your team.",
+        cta: "Talk to us",
+        features: [
+          "Everything in Pro",
+          "Shared team workspace",
+          "Admin & member roles",
+          "Premium transcription",
+          "Priority support",
+        ],
+      },
+    },
   },
   hero: {
     h1: { a: "Never sit through a recording ", em: "again." },
@@ -240,10 +290,60 @@ const en = {
 const ru: Dict = {
   nav: {
     howItWorks: "Как это работает",
+    pricing: "Цены",
     joinWaitlist: "В лист ожидания",
     openApp: "Открыть app",
     openMenu: "Открыть меню",
     switchLanguage: "Переключить язык",
+  },
+  pricing: {
+    h2: { a: "Простой и честный ", em: "прайсинг", b: "." },
+    sub: "Начни бесплатно. Переходи на Pro, когда Tenet экономит больше времени, чем стоит.",
+    monthly: "Помесячно",
+    annual: "Год",
+    save: "−2 месяца",
+    perMonth: "/мес",
+    perSeat: "/место",
+    billedAnnually: "при оплате за год",
+    founding: "Оффер для первых — первые 100 пользователей сохраняют Pro за $8/мес навсегда.",
+    plans: {
+      free: {
+        name: "Free",
+        note: "Попробуй весь цикл, бесплатно.",
+        cta: "В лист ожидания",
+        features: [
+          "5 часов записи в месяц",
+          "Запись → транскрипт → саммари",
+          "Каждый пункт со ссылкой на источник",
+          "История 7 дней",
+        ],
+      },
+      pro: {
+        name: "Pro",
+        badge: "Популярный",
+        note: "Для тех, кто живёт в созвонах.",
+        cta: "В лист ожидания",
+        features: [
+          "Всё из Free",
+          "~25 часов в месяц",
+          "Безлимитная история и поиск",
+          "AI-чат по твоим встречам",
+          "Экспорт — Markdown / текст / аудио",
+        ],
+      },
+      team: {
+        name: "Team",
+        note: "Общая память для команды.",
+        cta: "Связаться с нами",
+        features: [
+          "Всё из Pro",
+          "Общий воркспейс команды",
+          "Админ и роли участников",
+          "Премиум-транскрипция",
+          "Приоритетная поддержка",
+        ],
+      },
+    },
   },
   hero: {
     h1: { a: "Больше никогда не пересматривайте ", em: "записи." },

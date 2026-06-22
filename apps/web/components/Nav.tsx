@@ -35,6 +35,7 @@ export function Nav() {
           </div>
           <div className="nav-links">
             <a href="#trace">{t.nav.howItWorks}</a>
+            <a href="#pricing">{t.nav.pricing}</a>
           </div>
           <div className="nav-cta">
             <LangToggle />
@@ -60,6 +61,9 @@ export function Nav() {
       <div className={`mobilemenu${menuOpen ? " open" : ""}`} id="mobileMenu">
         <a href="#trace" onClick={() => setMenuOpen(false)}>
           {t.nav.howItWorks}
+        </a>
+        <a href="#pricing" onClick={() => setMenuOpen(false)}>
+          {t.nav.pricing}
         </a>
         <div className="mm-cta">
           <LangToggle />
