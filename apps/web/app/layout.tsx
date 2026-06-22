@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { LocaleProvider } from "@/lib/i18n";
 
-const display = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-display",
-  display: "swap",
-});
-const sans = Hanken_Grotesk({
-  subsets: ["latin"],
+// One typeface across the whole landing — Manrope (Cyrillic included).
+const sans = Manrope({
+  subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-sans",
   display: "swap",
@@ -25,13 +21,13 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tenet.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Tenet: notes you can finally trust",
+  title: "Tenet — never rewatch a recording again",
   description:
-    "Tenet records, transcribes and summarizes every meeting, then links each point back to the exact second it was said.",
+    "Tenet records, transcribes and summarizes every meeting and call, then hands you the summary in seconds. Jump to any moment in one click — and never sit through a recording again.",
   openGraph: {
-    title: "Tenet: notes you can finally trust",
+    title: "Tenet — never rewatch a recording again",
     description:
-      "An AI notetaker built around trust. Every insight traced to its source.",
+      "An AI notetaker for every call. Get the summary in seconds and jump to any moment in one click. Never sit through a recording again.",
     url: siteUrl,
     siteName: "Tenet",
     type: "website",
@@ -47,9 +43,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${sans.variable} ${mono.variable}`}
+      suppressHydrationWarning
+      className={`${sans.variable} ${mono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <LocaleProvider>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }

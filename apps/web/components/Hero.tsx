@@ -1,7 +1,11 @@
+"use client";
+
+import { useDict } from "@/lib/i18n";
 import { WaitlistForm } from "./WaitlistForm";
-import { GranolaMock } from "./GranolaMock";
+import { AppMock } from "./AppMock";
 
 export function Hero() {
+  const t = useDict();
   return (
     <header className="hero">
       <video className="voicebg" autoPlay muted loop playsInline aria-hidden="true" poster="/og/hero-poster.jpg">
@@ -10,18 +14,16 @@ export function Hero() {
 
       <div className="wrap">
         <h1>
-          Notes you can finally <em>trust.</em>
+          {t.hero.h1.a}
+          <em>{t.hero.h1.em}</em>
         </h1>
-        <p className="sub">
-          Tenet records, transcribes and summarizes every meeting, then links each point back to the exact second it
-          was said.
-        </p>
+        <p className="sub">{t.hero.sub}</p>
 
-        <WaitlistForm id="waitlistTop" note="Be first when Tenet opens up. One launch email, no spam." />
+        <WaitlistForm id="waitlistTop" />
       </div>
 
       <div className="wrap">
-        <GranolaMock />
+        <AppMock />
       </div>
     </header>
   );

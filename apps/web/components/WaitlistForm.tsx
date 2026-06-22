@@ -2,8 +2,9 @@
 
 import { useActionState, useEffect, useId, useRef } from "react";
 import { joinWaitlist, type WaitlistState } from "@/actions/join-waitlist";
+import { useDict } from "@/lib/i18n";
 
-const initial: WaitlistState = { ok: false, message: "" };
+const initial: WaitlistState = { ok: false, key: "" };
 
 export function WaitlistForm({
   id,
@@ -12,6 +13,7 @@ export function WaitlistForm({
   id?: string;
   note?: string;
 }) {
+  const t = useDict();
   const [state, action, pending] = useActionState(joinWaitlist, initial);
   const mountedAt = useRef<number>(0);
   const hpId = useId();
@@ -20,10 +22,14 @@ export function WaitlistForm({
     mountedAt.current = Date.now();
   }, []);
 
+  // Action returns a message key; the visible text is localized here so the
+  // server stays locale-agnostic.
+  const message = state.key ? t.waitlistMsg[state.key] : "";
+
   if (state.ok) {
     return (
       <p className="wl-ok" style={{ display: "block" }} role="status">
-        {state.message} &#10022;
+        {message} &#10022;
       </p>
     );
   }
@@ -50,17 +56,17 @@ export function WaitlistForm({
         <input
           type="email"
           name="email"
-          placeholder="you@work.com"
+          placeholder={t.waitlist.placeholder}
           autoComplete="email"
           required
         />
         <button className="btn btn-primary" type="submit" disabled={pending}>
-          {pending ? "Joining…" : "Join the waitlist"}
+          {pending ? t.waitlist.joining : t.waitlist.submit}
         </button>
       </form>
-      {state.message && !state.ok ? (
+      {message && !state.ok ? (
         <p className="wl-note" role="alert" style={{ color: "var(--amber)" }}>
-          {state.message}
+          {message}
         </p>
       ) : note ? (
         <p className="wl-note">{note}</p>

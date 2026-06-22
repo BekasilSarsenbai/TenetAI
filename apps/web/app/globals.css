@@ -17,8 +17,8 @@
     --paper:#F4F2EC;
     --radius:18px;
     --maxw:1160px;
-    --display:var(--font-display),"Space Grotesk",system-ui,sans-serif;
-    --sans:var(--font-sans),"Hanken Grotesk",system-ui,-apple-system,sans-serif;
+    --display:var(--font-sans),"Manrope",system-ui,sans-serif;
+    --sans:var(--font-sans),"Manrope",system-ui,-apple-system,sans-serif;
     --mono:var(--font-mono),"JetBrains Mono",ui-monospace,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -41,14 +41,16 @@
   /* ---------- NAV ---------- */
   .nav{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);
     background:rgba(11,12,15,.66);border-bottom:1px solid var(--line)}
-  .nav .row{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .nav .row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:64px}
+  .nav .brand{justify-self:start}
+  .nav-links{justify-self:center}
   .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;font-size:18px}
   .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--paper);
     box-shadow:0 0 0 3px rgba(244,242,236,.12);position:relative}
   .brand .dot::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--ink)}
   .nav-links{display:flex;gap:30px;font-size:14.5px;color:var(--muted)}
   .nav-links a:hover{color:var(--text)}
-  .nav-cta{display:flex;gap:8px;align-items:center}
+  .nav-cta{display:flex;gap:8px;align-items:center;justify-self:end}
   @media(max-width:780px){.nav-links{display:none}}
 
   .btn{font-family:var(--sans);font-weight:600;font-size:14.5px;border-radius:10px;
@@ -80,15 +82,15 @@
     background:linear-gradient(180deg,rgba(11,12,15,.97) 0%,rgba(11,12,15,.9) 16%,rgba(11,12,15,.74) 34%,rgba(11,12,15,.5) 52%,rgba(11,12,15,.2) 72%,rgba(11,12,15,0) 100%)}
   .hero .wrap{position:relative;z-index:2}
   h1{font-family:var(--display);font-weight:600;letter-spacing:-.035em;line-height:1.04;
-    font-size:clamp(2.6rem,6.6vw,4.4rem);max-width:15ch;margin:18px auto 0}
+    font-size:clamp(2.6rem,6.6vw,4.4rem);max-width:15ch;margin:18px auto 0;text-wrap:balance}
   h1 em,h2 em{font-style:normal;font-weight:inherit;position:relative;white-space:nowrap}
   /* amber underline is reserved for the hero + final CTA only, elsewhere em is just a warm tint */
   h2 em{color:var(--amber)}
   h1 em::after,.finalcta h2 em::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:3px;
     background:var(--amber);border-radius:2px;opacity:.9}
   .finalcta h2 em{color:inherit}
-  .sub{color:var(--muted);font-size:clamp(1.05rem,2.2vw,1.28rem);line-height:1.5;
-    max-width:38ch;margin:22px auto 0}
+  .sub{color:var(--muted);font-size:clamp(1.05rem,2.2vw,1.28rem);line-height:1.55;
+    max-width:42ch;margin:24px auto 0;text-wrap:balance}
   .hero-cta{display:flex;gap:12px;justify-content:center;margin-top:30px;flex-wrap:wrap}
   .hero-cta .btn{padding:13px 22px;font-size:15.5px;border-radius:12px}
   /* waitlist email capture */
@@ -116,18 +118,21 @@
   @media(max-width:460px){.waitlist{flex-direction:column;background:transparent;border:0;padding:0;gap:10px}
     .waitlist input{border:1px solid var(--line-2);border-radius:12px;background:rgba(255,255,255,.04)}
     .waitlist .btn{width:100%;justify-content:center}}
-  .trust{margin-top:42px;display:flex;flex-direction:column;align-items:center;gap:22px}
+  .trust{margin-top:42px;display:flex;flex-direction:column;align-items:center;gap:30px}
   /* works-with as its own strip below the hero (cleaner hero, logo-wall convention) */
-  .worksstrip{padding:60px 0;border-top:1px solid var(--line)}
+  .worksstrip{padding:76px 0}
   .worksstrip .trust{margin-top:0}
-  .trust .lbl{text-transform:uppercase;letter-spacing:.2em;font-size:11px;color:var(--faint);font-weight:600}
-  .logos{display:flex;align-items:center;justify-content:center;gap:46px;flex-wrap:wrap;color:#9396a0}
-  .logos .logo{display:inline-flex;align-items:center;gap:9px;opacity:.78;transition:.2s}
-  .logos .logo:hover{opacity:1}
-  .logos .logo svg{height:21px;width:auto;display:block}
-  .logos .logo .wm{font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1}
-  .logos .logo .wm.zoom{font-size:20px;letter-spacing:-.02em}
-  @media(max-width:560px){.logos{gap:30px}}
+  .trust .lbl{text-transform:uppercase;letter-spacing:.24em;font-size:11.5px;color:var(--faint);font-weight:600}
+  .logos{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+  .logos .logo{display:inline-flex;align-items:center;gap:15px;color:var(--soft);
+    background:rgba(255,255,255,.035);border:1px solid transparent;border-radius:18px;padding:20px 32px;
+    transition:transform .22s ease,border-color .22s ease,background .22s ease,color .22s ease}
+  .logos .logo:hover{transform:translateY(-3px);border-color:var(--amber-line);background:rgba(255,255,255,.06);color:var(--text)}
+  .logos .logo svg{height:34px;width:auto;display:block;transition:color .22s ease}
+  .logos .logo:hover svg{color:var(--amber)}
+  .logos .logo .wm{font-size:23px;font-weight:700;letter-spacing:-.01em;line-height:1}
+  .logos .logo .wm.zoom{font-size:28px;letter-spacing:-.02em}
+  @media(max-width:560px){.logos{gap:12px}.logos .logo{padding:14px 20px;gap:11px}.logos .logo svg{height:26px}.logos .logo .wm{font-size:18px}.logos .logo .wm.zoom{font-size:22px}}
 
   /* ---------- TRACE CARD (hero visual, static mock) ---------- */
   .stage{position:relative;z-index:1;margin:44px auto 0;max-width:920px}
@@ -154,7 +159,7 @@
     width:1100px;height:620px;pointer-events:none;z-index:0;
     background:radial-gradient(50% 50% at 50% 50%,rgba(242,193,78,.10),transparent 70%);filter:blur(8px)}
   .section.glow .wrap{position:relative;z-index:1}
-  .section.hair{border-top:1px solid var(--line)}
+  .section.hair{border-top:none}
   /* amber-dot markers replace stroke icons (privacy + pricing) */
   .chk .ic-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-top:7px;
     box-shadow:0 0 0 4px var(--amber-soft)}
@@ -168,9 +173,8 @@
   .bigquote .qn{font-size:15px;font-weight:600;color:var(--text)}
   .bigquote .qh{font-family:var(--mono);font-size:12.5px;color:var(--faint);letter-spacing:.02em}
   /* supporting testimonials, static editorial grid, no marquee/avatars/hover-lift */
-  .quoterow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:72px}
-  .quoterow figure{background:var(--ink);padding:32px 30px;display:flex;flex-direction:column;justify-content:space-between;gap:22px}
+  .quoterow{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:72px}
+  .quoterow figure{background:var(--ink-2);border-radius:16px;padding:32px 30px;display:flex;flex-direction:column;justify-content:space-between;gap:22px}
   .quoterow blockquote{font-size:15.5px;line-height:1.6;color:var(--text)}
   .quoterow figcaption{display:flex;flex-direction:column;gap:3px}
   .quoterow figcaption b{font-size:13.5px;font-weight:600;color:var(--text)}
@@ -260,6 +264,71 @@
   }
 
   .footnote{text-align:center;color:var(--faint);font-size:12.5px;margin-top:26px;font-family:var(--mono)}
+
+  /* ---- in-call live overlay demo (replaces trace window) ---- */
+  .callframe{position:relative;margin-top:54px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#0C0E12;box-shadow:0 40px 100px -45px rgba(0,0,0,.85)}
+  .winbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:46px;padding:0 16px;background:#15171c}
+  .windots{display:flex;gap:8px}
+  .windots i{width:12px;height:12px;border-radius:50%;display:block}
+  .windots i.r{background:#FF5F57}
+  .windots i.y{background:#FEBC2E}
+  .windots i.g{background:#28C840}
+  .winurl{justify-self:center;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border-radius:8px;padding:6px 18px;color:var(--faint);font-size:12.5px;font-family:var(--mono);white-space:nowrap}
+  .winurl svg{width:12px;height:12px;opacity:.7}
+  .callbody{position:relative;height:540px;background:#131314}
+  .call{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:14px 14px 84px}
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;height:100%}
+  .ctile{position:relative;border-radius:12px;overflow:hidden;background-size:cover;background-position:center;background-repeat:no-repeat;margin:0}
+  .ctile::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 72%,rgba(0,0,0,.5))}
+  .cnm{position:absolute;left:14px;bottom:11px;z-index:1;color:#fff;font-size:14px;font-weight:500;font-family:var(--sans);text-shadow:0 1px 4px rgba(0,0,0,.7)}
+  /* Google Meet bottom bar */
+  .cbar{position:absolute;left:0;right:0;bottom:0;height:78px;display:flex;align-items:center;padding:0 22px;z-index:5;background:linear-gradient(180deg,rgba(19,19,20,0),rgba(19,19,20,.94) 62%)}
+  .cmeta{color:rgba(255,255,255,.72);font-size:13.5px;font-weight:500;white-space:nowrap}
+  .cctrls{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px}
+  .cright{margin-left:auto;display:flex;gap:4px}
+  .cbtn{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.13);border:0;display:grid;place-items:center;color:#fff;cursor:pointer;transition:background .15s}
+  .cbtn svg{width:20px;height:20px}
+  .cbtn:hover{background:rgba(255,255,255,.22)}
+  .cbtn.ghost{background:transparent}
+  .cbtn.ghost:hover{background:rgba(255,255,255,.12)}
+  .cbtn.leave{width:60px;border-radius:23px;background:#EA4335}
+  .cbtn.leave:hover{background:#d93a2e}
+
+  .tenet{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:20;width:min(344px,calc(100% - 40px))}
+  .tnt-card{background:#ffffff;border:1px solid rgba(0,0,0,.05);border-radius:16px;box-shadow:0 24px 64px -22px rgba(0,0,0,.62);overflow:hidden}
+  .thead{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 15px}
+  .td{width:8px;height:8px;border-radius:50%;background:#E5484D;flex:none;animation:tpl 1.6s infinite}
+  @keyframes tpl{70%{box-shadow:0 0 0 6px rgba(229,72,77,0)}100%{box-shadow:0 0 0 0 rgba(229,72,77,0)}}
+  .tnm{font-weight:700;font-size:14px;letter-spacing:.01em;color:#1E1F22}
+  .tdiv{color:#C7C9CE;font-weight:700}
+  .tclock{font-family:var(--mono);font-size:12.5px;color:#6B6E76}
+  .tsp{flex:1}
+  .tmark{display:inline-flex;align-items:center;gap:7px;background:#1E1F22;color:#fff;border:0;border-radius:11px;padding:8px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .tmark svg{width:13px;height:13px}
+  .tmark:hover{background:#000}
+  .tmark:active{transform:scale(.96)}
+  .texp{width:30px;height:30px;border-radius:9px;border:0;background:rgba(0,0,0,.045);color:#6B6E76;display:grid;place-items:center;cursor:pointer}
+  .texp:hover{background:rgba(0,0,0,.09)}
+  .texp svg{width:16px;height:16px;transition:transform .25s}
+  .tenet.open .texp svg{transform:rotate(180deg)}
+  .tbody{max-height:0;opacity:0;overflow:hidden;transition:max-height .3s ease,opacity .25s ease}
+  .tenet.open .tbody{max-height:320px;opacity:1}
+  .tbody-in{padding:3px 16px 16px}
+  .tlbl{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9CA0A8}
+  .tq{font-size:15.5px;font-weight:600;line-height:1.32;letter-spacing:-.01em;color:#1E1F22;margin-top:8px}
+  .tqmeta{font-family:var(--mono);font-size:11px;color:#B47E12;margin-top:9px}
+  .trow{display:flex;gap:9px;margin-top:15px}
+  .tnextq{flex:1;border:1px solid rgba(0,0,0,.12);background:#fff;border-radius:11px;padding:10px;font-size:13px;font-weight:600;color:#1E1F22;cursor:pointer;font-family:var(--sans)}
+  .tnextq:hover{border-color:#bbb;background:#FAFAFA}
+  .tstop{border:1px solid rgba(229,72,77,.35);background:#FDEDED;color:#C4313A;border-radius:11px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .tstop:hover{background:#FCE3E3}
+  .tmarks{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;min-height:8px}
+  .tm{font-family:var(--mono);font-size:11px;color:#B47E12;border:1px solid #E7C66B;background:#FBF4E2;border-radius:7px;padding:4px 8px}
+  .tempty{font-size:12px;color:#9CA0A8}
+  .ttoast{position:absolute;top:72px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:30;background:#1E1F22;color:#fff;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none}
+  .ttoast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media(max-width:760px){.callbody{height:460px}.cmeta,.cright{display:none}.tq{font-size:15px}}
+  @media(max-width:480px){.callbody{height:520px}.cgrid{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.tmark{padding:8px 11px}.winurl{font-size:11px;padding:5px 10px}.cctrls{gap:7px}.cbtn{width:42px;height:42px}.cbtn.leave{width:54px}}
 
   /* ---------- realistic macOS window (hero) ---------- */
   .win{position:relative;z-index:1;border-radius:13px;overflow:hidden;text-align:left;font-family:var(--sans);
@@ -386,9 +455,8 @@
     font-family:var(--sans);font-size:15.5px;color:var(--muted)}
   .platforms .sep{color:var(--faint)}
   /* who-it's-for editorial grid (replaces icon role cards) */
-  .rolelist{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:48px}
-  .roleitem{background:var(--ink);padding:34px 32px 36px;position:relative;transition:background .25s}
+  .rolelist{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:48px}
+  .roleitem{background:var(--ink-2);border-radius:16px;padding:34px 32px 36px;position:relative;transition:background .25s}
   .roleitem::before{content:"";position:absolute;left:0;top:-1px;height:2px;width:0;background:var(--amber);transition:width .3s cubic-bezier(.22,.61,.36,1)}
   .roleitem:hover{background:#121419}
   .roleitem:hover::before{width:46px}
@@ -472,14 +540,14 @@
   .finalcta h2{font-size:clamp(2.2rem,5vw,3.4rem)}
   @media(prefers-reduced-motion:reduce){.ctabg{filter:brightness(.55)}}
 
-  .footer{border-top:1px solid var(--line);padding:60px 0 44px;margin-top:40px}
+  .footer{padding:60px 0 44px;margin-top:40px}
   .footcols{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px}
   .footer .tag2{color:var(--muted);font-size:13.5px;max-width:30ch;line-height:1.5;margin-top:14px}
   .footer h5{font-size:12px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
   .footer ul{list-style:none;display:flex;flex-direction:column;gap:10px}
   .footer .fcol a{color:var(--muted);font-size:14px}
   .footer .fcol a:hover{color:var(--text)}
-  .footbar{display:flex;justify-content:space-between;align-items:center;margin-top:46px;padding-top:24px;border-top:1px solid var(--line);color:var(--faint);font-size:13px;flex-wrap:wrap;gap:12px}
+  .footbar{display:flex;justify-content:space-between;align-items:center;margin-top:46px;padding-top:24px;color:var(--faint);font-size:13px;flex-wrap:wrap;gap:12px}
   @media(max-width:760px){.footcols{grid-template-columns:1fr 1fr}}
   @media(max-width:460px){.footcols{grid-template-columns:1fr}}
   /* ===== senior polish: motion, interactions, nav, marquee ===== */
@@ -597,3 +665,134 @@
   .gmock .ask .kbd{font-family:var(--mono);font-size:10.5px;color:var(--gfaint);border:1px solid var(--gline);border-radius:5px;padding:2px 6px}
   @media(max-width:760px){.gmock .grid{grid-template-columns:1fr}.gmock .side{display:none}.gmock .doc{padding:24px 20px;max-height:none}}
   @media(prefers-reduced-motion:reduce){.gmock .src{transition:none}}
+
+  /* ============ App showcase mockup (hero) — scoped, dark app theme ============ */
+  .appmock{
+    --bg:#0B0B0D;--side:#0E0E11;--card:#17171B;--hover:#1E1E23;
+    --ink:#F3F3F4;--soft:#B8B8BE;--muted:#7A7A82;--faint:#48484F;
+    --line:rgba(255,255,255,.06);--line2:rgba(255,255,255,.11);
+    --amber:#E9B84A;--a-bg:rgba(233,184,74,.09);--a-line:rgba(233,184,74,.4);
+    --m:"JetBrains Mono",ui-monospace,monospace;
+    display:block;height:600px;margin-top:46px;border-radius:16px;overflow:hidden;
+    border:1px solid var(--line2);background:var(--bg);color:var(--ink);
+    font-family:"Manrope",system-ui,sans-serif;font-size:15px;line-height:1.55;text-align:left;
+    box-shadow:0 50px 130px -55px rgba(0,0,0,.9)}
+  .appmock *{box-sizing:border-box}
+  .appmock button{font-family:inherit;cursor:pointer;color:inherit}
+  .appmock ::-webkit-scrollbar{width:7px}
+  .appmock ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:5px}
+  .am-app{display:grid;grid-template-columns:248px 1fr;height:100%}
+  /* sidebar */
+  .appmock .side{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;padding:13px 11px}
+  .appmock .brand{display:flex;align-items:center;gap:9px;padding:5px 7px 15px}
+  .appmock .brand-d{width:22px;height:22px;border-radius:7px;background:var(--ink);display:grid;place-items:center}
+  .appmock .brand-d::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--side)}
+  .appmock .brand b{font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .appmock .new-note{display:flex;align-items:center;gap:10px;width:100%;background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:11px;padding:11px 13px;font-size:13.5px;font-weight:600;color:var(--soft);margin-bottom:5px}
+  .appmock .new-note svg{width:15px;height:15px}
+  .appmock .search{display:flex;align-items:center;gap:10px;padding:10px 13px;color:var(--faint);font-size:13.5px;margin-bottom:6px}
+  .appmock .search svg{width:15px;height:15px}
+  .appmock .side-list{flex:1;overflow:hidden}
+  .appmock .grp{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:13px 10px 6px}
+  .appmock .mi{display:block;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:10px 12px;margin-bottom:1px;position:relative}
+  .appmock .mi.on{background:rgba(255,255,255,.06)}
+  .appmock .mi.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:2px;background:var(--amber)}
+  .appmock .mi-name{font-size:13.5px;font-weight:500;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+  .appmock .mi.on .mi-name{color:var(--ink);font-weight:600}
+  .appmock .mi-meta{font-size:11.5px;color:var(--faint);margin-top:3px;font-family:var(--m)}
+  .appmock .side-foot{display:flex;align-items:center;gap:10px;padding:11px 8px 4px;margin-top:6px;border-top:1px solid var(--line)}
+  .appmock .sf-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#33333C,#1E1E24);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--soft);flex:none}
+  .appmock .sf-name{font-size:13px;font-weight:600;color:var(--soft)}
+  .appmock .sf-plan{font-size:11px;color:var(--faint);font-family:var(--m);margin-top:1px}
+  /* main */
+  .appmock .main{display:flex;flex-direction:column;min-width:0;height:100%}
+  .appmock .topbar{display:flex;align-items:center;padding:0 24px;height:52px;flex:none}
+  .appmock .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .appmock .tb-btn{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted);border:1px solid var(--line2);background:none;padding:7px 12px;border-radius:10px}
+  .appmock .tb-btn svg{width:14px;height:14px}
+  .appmock .stage{position:relative;flex:1;min-height:0}
+  .appmock .vnote{display:flex;flex-direction:row;height:100%;overflow:hidden;position:relative}
+  .appmock .note-left{flex:1;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+  .appmock .note-left-scroll{flex:1;overflow:auto}
+  .appmock .nl-inner{max-width:560px;margin:0 auto;padding:28px 32px 26px;width:100%}
+  /* video */
+  .appmock .vid{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:16/10;margin-bottom:24px;border:1px solid var(--line)}
+  .appmock .vid-grid{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:2px}
+  .appmock .vid-tile{position:relative;background-size:cover;background-position:center;display:flex;align-items:flex-end;padding:10px}
+  .appmock .vid-tile::after{content:'';position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+  .appmock .vid-tile span{position:relative;z-index:1;font-size:10.5px;color:#fff;font-family:var(--m);background:rgba(0,0,0,.45);padding:3px 8px;border-radius:6px;font-weight:500}
+  .appmock .vid-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);color:#111;border:0;display:grid;place-items:center;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .appmock .vid-play svg{width:17px;height:17px;margin-left:3px}
+  .appmock .vid-bar{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:linear-gradient(transparent,rgba(0,0,0,.7));display:flex;align-items:center;gap:10px}
+  .appmock .vid-time{font-family:var(--m);font-size:11px;color:#fff;flex:none}
+  .appmock .vid-prog{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.2);position:relative}
+  .appmock .vid-prog-fill{position:absolute;left:0;top:0;bottom:0;background:var(--amber);border-radius:2px}
+  /* note content */
+  .appmock .nl-title{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin-bottom:10px}
+  .appmock .nl-meta{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);flex-wrap:wrap;font-family:var(--m)}
+  .appmock .nl-meta .sep{width:3px;height:3px;border-radius:50%;background:var(--faint)}
+  .appmock .nl-rule{height:1px;background:var(--line);margin:22px 0}
+  .appmock .sec-h{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:13px}
+  .appmock .summary-p{font-size:15px;line-height:1.7;color:var(--soft)}
+  .appmock .summary-p b{color:var(--ink);font-weight:600}
+  .appmock .kp{margin-bottom:4px}
+  .appmock .kp-row{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;background:none;border:0;padding:7px 0}
+  .appmock .kp-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none;margin-top:10px;transition:.18s}
+  .appmock .kp-main{flex:1;min-width:0}
+  .appmock .kp-txt{font-size:15px;line-height:1.55;color:var(--soft)}
+  .appmock .kp-mag{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--faint);flex:none;border:1px solid transparent}
+  .appmock .kp-mag svg{width:15px;height:15px}
+  .appmock .kp-row:hover .kp-txt{color:var(--ink)}
+  .appmock .kp-src{max-height:0;opacity:0;overflow:hidden;transition:max-height .3s,opacity .25s,margin .3s;margin-left:18px}
+  .appmock .kp-quote{font-size:14.5px;font-style:italic;line-height:1.6;color:var(--soft);padding:11px 15px;border-left:2px solid var(--amber);background:var(--a-bg);border-radius:0 10px 10px 0}
+  .appmock .kp-jump{display:inline-flex;align-items:center;gap:8px;margin-top:10px;font-family:var(--m);font-size:12px;color:var(--amber)}
+  .appmock .kp-jump .pp{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:5px;background:var(--a-bg);border:1px solid var(--a-line)}
+  .appmock .kp-jump .pp svg{width:9px;height:9px}
+  .appmock .kp-jump .who{color:var(--faint)}
+  .appmock .kp.open .kp-src{max-height:200px;opacity:1;margin-top:5px;margin-bottom:11px}
+  .appmock .kp.open .kp-dot{background:var(--amber)}
+  .appmock .kp.open .kp-txt{color:var(--ink)}
+  .appmock .kp.open .kp-mag{color:var(--amber);border-color:var(--a-line);background:var(--a-bg)}
+  .appmock .todo{display:flex;align-items:center;gap:13px;padding:10px 0;font-size:15px;color:var(--soft)}
+  .appmock .todo .cb{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--line2);flex:none}
+  /* right column */
+  .appmock .note-right{width:46%;max-width:540px;display:flex;flex-direction:column;background:var(--bg)}
+  .appmock .tabs{display:flex;align-items:center;padding:0 20px;height:52px;border-bottom:1px solid var(--line);gap:2px;flex:none}
+  .appmock .tab{background:none;border:0;font-size:13.5px;font-weight:500;color:var(--muted);padding:0 13px;height:100%;position:relative}
+  .appmock .tab.on{color:var(--ink);font-weight:600}
+  .appmock .tab.on::after{content:"";position:absolute;left:13px;right:13px;bottom:-1px;height:2px;background:var(--ink)}
+  .appmock .panel{flex:1;overflow:auto;padding:20px}
+  .appmock .tr-block{margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+  .appmock .tr-block:last-child{border-bottom:0}
+  .appmock .tr-who{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .appmock .tr-av{width:25px;height:25px;border-radius:50%;background:#2A2A30;display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--soft);flex:none;border:1px solid var(--line2)}
+  .appmock .tr-name{font-size:13.5px;font-weight:600;color:var(--ink)}
+  .appmock .tr-said{font-size:14.5px;line-height:1.8;color:var(--soft);padding-left:34px}
+  .appmock .tr-block.lit .tr-said{color:var(--ink)}
+  .appmock .tr-said mark{background:var(--a-bg);color:var(--amber);border-radius:3px;padding:1px 3px;font-style:normal}
+  .appmock .ins-block{margin-bottom:22px}
+  .appmock .ins-lbl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:11px}
+  .appmock .ins-item{display:flex;gap:11px;margin-bottom:10px}
+  .appmock .ins-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none;margin-top:8px}
+  .appmock .ins-txt{font-size:14.5px;line-height:1.6;color:var(--soft)}
+  .appmock .ins-txt b{color:var(--ink);font-weight:600}
+  .appmock .sugg{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+  .appmock .sugg button{text-align:left;font-size:13.5px;color:var(--soft);border:1px solid var(--line);background:var(--card);border-radius:11px;padding:10px 13px}
+  .appmock .chat-q{display:flex;margin-bottom:12px}
+  .appmock .bub{max-width:90%;padding:11px 14px;font-size:14.5px;line-height:1.6}
+  .appmock .bub.u{margin-left:auto;background:rgba(255,255,255,.06);color:var(--ink);border-radius:15px 15px 5px 15px}
+  .appmock .bub.a{color:var(--soft);padding:2px 0}
+  .appmock .cites{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .appmock .cite{display:inline-flex;align-items:center;gap:6px;font-family:var(--m);font-size:11px;color:var(--amber);border:1px solid var(--a-line);background:var(--a-bg);border-radius:7px;padding:4px 9px}
+  /* dock */
+  .appmock .dock{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;padding:0 0 18px;pointer-events:none;z-index:8}
+  .appmock .dock-inner{display:flex;align-items:center;gap:10px}
+  .appmock .dock-resume{display:inline-flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line2);border-radius:99px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--soft);box-shadow:0 14px 40px rgba(0,0,0,.55)}
+  .appmock .dock-resume svg{width:13px;height:13px}
+  .appmock .dock-ask{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line2);border-radius:99px;padding:5px 5px 5px 18px;box-shadow:0 14px 40px rgba(0,0,0,.55);width:340px}
+  .appmock .dock-ask input{flex:1;border:0;outline:none;background:none;font-size:13.5px;color:var(--ink);min-width:0}
+  .appmock .dock-ask input::placeholder{color:var(--faint)}
+  .appmock .dock-send{width:34px;height:34px;border-radius:50%;background:#F3F3F4;color:#111;border:0;display:grid;place-items:center;flex:none}
+  .appmock .dock-send svg{width:15px;height:15px}
+  @media(max-width:880px){.appmock .note-right{width:42%}.appmock .dock-ask{width:240px}}
+  @media(max-width:760px){.appmock{height:540px}.appmock .am-app{grid-template-columns:1fr}.appmock .side,.appmock .note-right{display:none}}

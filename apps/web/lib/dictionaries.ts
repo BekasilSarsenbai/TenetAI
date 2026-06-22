@@ -1,0 +1,473 @@
+// Bilingual copy for the Tenet landing (EN + RU).
+// One source of truth: every visible string lives here, keyed by locale.
+// Positioning: "never rewatch a recording again" — time saved is the lead,
+// jump-to-source is supporting proof. Rich headings are split into { a, em, b }
+// so components can wrap the emphasis word in <em> (the amber-underlined word).
+
+export type Locale = "en" | "ru";
+
+export const LOCALES: Locale[] = ["en", "ru"];
+export const DEFAULT_LOCALE: Locale = "en";
+
+const en = {
+  nav: {
+    howItWorks: "How it works",
+    joinWaitlist: "Join the waitlist",
+    openApp: "Open app",
+    openMenu: "Open menu",
+    switchLanguage: "Switch language",
+  },
+  hero: {
+    h1: { a: "Never sit through a recording ", em: "again." },
+    sub: "Tenet records, transcribes and summarizes every call, then hands you the summary in seconds — so you act on what was said instead of watching it back.",
+    note: "Be first when Tenet opens up. One launch email, no spam.",
+  },
+  waitlist: {
+    placeholder: "you@work.com",
+    joining: "Joining…",
+    submit: "Join the waitlist",
+  },
+  worksWith: {
+    label: "Works with",
+  },
+  trace: {
+    h2: { a: "The moment, not the ", em: "hour.", b: "" },
+    lead: "Every line in your summary is linked to the second it was said. Need to double-check something? Click it and land on the exact moment — no scrubbing, no dragging the playhead, no re-listening to an hour to find ten seconds.",
+    summary: "Summary",
+    points: "3 points",
+    transcript: "Transcript",
+    clickPoint: "Click a point →",
+    playLabel: "Play source clip",
+    items: [
+      {
+        text: "Onboarding is where most new users quietly drop off.",
+        lines: [
+          { who: "Maya", said: "So we looked at the activation funnel again this week." },
+          { who: "Dev", said: "Honestly, <mark>most of the drop-off happens during onboarding</mark>, before they ever reach the core feature." },
+          { who: "Maya", said: "Right, and that matches what support keeps hearing." },
+        ],
+      },
+      {
+        text: "The team keeps re-doing context between weekly syncs.",
+        lines: [
+          { who: "Dev", said: "Can I name the biggest pain first?" },
+          { who: "Dev", said: "<mark>We keep losing context between the weekly syncs</mark>, so we redo the same conversation every time." },
+          { who: "Maya", said: "Yeah, nobody remembers what we decided." },
+        ],
+      },
+      {
+        text: "Pricing felt fair the moment they saw the time saved.",
+        lines: [
+          { who: "Maya", said: "And how did the price land for you?" },
+          { who: "Dev", said: "At first it gave me pause, but <mark>once I saw how much time it saved, it felt completely fair</mark>." },
+          { who: "Maya", said: "Good, that's the reaction we're going for." },
+        ],
+      },
+    ],
+  },
+  liveDemo: {
+    h2: { a: "In the call, ", em: "never in the way.", b: "" },
+    lead: "No bot joins, no link to paste. Tenet floats at the top of your meeting, follows your interview guide, and timestamps the moments you mark — so the notes are half-written before you hang up.",
+    mark: "Mark",
+    currentQuestion: "Current question",
+    questions: [
+      "Walk me through the last time you used a tool like this.",
+      "What did you expect to see when you first opened it?",
+      "Where did you get stuck — and what did you do?",
+      "What made you trust, or not trust, the result?",
+      "If you had a magic wand, what's the one thing you'd change?",
+    ],
+    nextQuestion: "Next question →",
+    stop: "Stop & summarize",
+    marksEmpty: "Marks you make appear here, timestamped.",
+    momentMarked: "★ Moment marked",
+    hint: "↑ Tenet sits at the top — out of the way of the call",
+    participantName: "P03 · Participant",
+    youName: "You",
+  },
+  appMock: {
+    newNote: "New note",
+    search: "Search",
+    share: "Share",
+    plan: "Early access · Free",
+    today: "Today",
+    yesterday: "Yesterday",
+    tabs: { transcript: "Transcript", insights: "Insights", chat: "AI chat" },
+    summaryH: "Summary",
+    keyPointsH: "Key points",
+    nextStepsH: "Next steps",
+    jumpTo: "Jump to",
+    listen: "Play recording",
+    askPlaceholder: "Ask about this meeting…",
+    tileP: "P03 · Participant",
+    tileYou: "You",
+    notes: [
+      { day: "Today", title: "Kickoff call, Acme × Northwind", meta: "10:30 · now" },
+      { day: "Today", title: "Weekly sync, Growth", meta: "9:00" },
+      { day: "Yesterday", title: "Roadmap review", meta: "16:15" },
+      { day: "Yesterday", title: "1:1 with Priya", meta: "13:00" },
+      { day: "Yesterday", title: "Customer, Lumen Labs", meta: "11:00" },
+    ],
+    title: "Kickoff call, Acme × Northwind",
+    meta: "Jun 11 · 27:14 · You, Maya, Dev, Priya",
+    summary: "Acme's activation is leaking at <b>onboarding</b>. The team keeps re-building context between syncs, and pricing felt fair the moment the time saved was clear.",
+    kp: [
+      { txt: "Most new users quietly drop off during onboarding.", ts: "12:04", who: "Dev", q: "most of the drop-off happens during onboarding, before they ever reach the core feature." },
+      { txt: "The team keeps re-building context between weekly syncs.", ts: "16:20", who: "Maya", q: "every sync starts with us re-remembering where we left off last time." },
+      { txt: "Pricing felt fair the moment they saw the time saved.", ts: "21:50", who: "Priya", q: "once it was clear how many hours it saves, price stopped being a question." },
+    ],
+    tr: [
+      { who: "Maya", src: -1, html: "Hi everyone, this is the Acme and Northwind kickoff. Let's walk through where activation stands now." },
+      { who: "Dev", src: 0, html: "The main problem — <mark>most of the drop-off happens during onboarding, before they ever reach the core feature.</mark> People sign up and vanish." },
+      { who: "Maya", src: 1, html: "<mark>Every sync starts with us re-remembering where we left off last time.</mark> It eats the first ten minutes." },
+      { who: "Priya", src: 2, html: "At first yes, but <mark>once it was clear how many hours it saves, price stopped being a question.</mark>" },
+      { who: "Dev", src: -1, html: "Okay, so the focus is onboarding and keeping context. Noted." },
+    ],
+    todos: ["Dig into drop-off in the onboarding funnel", "Share the sync summary template", "Add a 30-second 'what this does' moment"],
+    sugg: ["What blocked them most?", "Did pricing come up?", "Were competitors mentioned?"],
+    insights: {
+      themesH: "Key themes",
+      themes: [
+        "Onboarding is the main churn driver — came up in three sessions.",
+        "Users want to see a finished example before they trust it.",
+        "Repeating context between syncs signals a missing 'memory' layer.",
+      ],
+      speakersH: "Speaker breakdown",
+      speakers: ["<b>You</b> — 42% of talk time", "<b>Cumalala</b> — 58% of talk time"],
+    },
+    chat: { q: "What blocked them most?", a: "Onboarding — users drop off before the core feature.", cite: "▶ Dev · 12:04" },
+  },
+  granola: {
+    recording: "Recording · 27:14",
+    newNote: "New note",
+    search: "Search",
+    today: "Today",
+    yesterday: "Yesterday",
+    sidebar: [
+      { name: "Discovery call, Acme × Northwind", when: "10:30 AM · live" },
+      { name: "Weekly sync, Growth", when: "9:00 AM" },
+      { name: "Roadmap review", when: "4:15 PM" },
+      { name: "1:1 with Priya", when: "1:00 PM" },
+      { name: "Customer, Lumen Labs", when: "11:00 AM" },
+    ],
+    docTitle: "Discovery call, Acme × Northwind",
+    date: "Jun 11",
+    attendees: "Maya, Dev, Priya",
+    summary: "Summary",
+    para: {
+      a: "Acme's activation is leaking at ",
+      b: "onboarding",
+      c: ". The team keeps re-doing context between weekly syncs, and pricing felt fair once the time saved was clear.",
+    },
+    keyPoints: "Key points",
+    kp: [
+      { t: "Onboarding is where most new users quietly drop off.", q: "most of the drop-off happens during onboarding, before they ever reach the core feature." },
+      { t: "The team keeps re-doing context between weekly syncs.", q: "we keep losing context between the weekly syncs, so we redo the same conversation." },
+      { t: "Pricing felt fair the moment they saw the time saved.", q: "once I saw how much time it saved, it felt completely fair." },
+    ],
+    seeSource: "See source",
+    speaker: "Dev",
+    jumpTo: "Jump to",
+    nextSteps: "Next steps",
+    todos: ["Audit onboarding funnel drop-off", "Share weekly-sync recap template"],
+    ask: "Ask anything about this meeting…",
+  },
+  synthesis: {
+    h2: { a: "The pattern finds ", em: "you.", b: "" },
+    lead: "One call is a note. Twenty are a signal. Tenet reads across all of them and surfaces the themes that keep coming up — so you see the pattern without replaying a single meeting.",
+    keypts: [
+      { b: "Themes surface on their own", rest: " — across every interview and call, not one transcript at a time." },
+      { b: "Proof in one click.", rest: " Each theme sits beside the exact moments behind it." },
+    ],
+    panelTitle: "Recurring themes",
+    conversations: "12 conversations",
+    themes: [
+      { name: "Onboarding drop-off", count: "8 sources" },
+      { name: "Lost context between syncs", count: "5 sources" },
+      { name: "Pricing felt fair after value", count: "4 sources" },
+    ],
+    view: "View ↗",
+  },
+  roles: {
+    h2: { a: "Built for people who live in ", em: "calls.", b: "" },
+    items: [
+      { rl: "Product teams", p: "Turn every customer and team call into decisions, minutes after it ends." },
+      { rl: "UX researchers", p: "Run a dozen interviews and get the themes without re-listening to one." },
+      { rl: "Founders", p: "Investor, customer and hiring calls, summarized. Read the recap, skip the replay." },
+      { rl: "Consultants", p: "Bill for insight, not for hours spent rewatching recordings." },
+    ],
+  },
+  testimonials: {
+    h2: { a: "Hours back, every ", em: "week." },
+    lead: "Early product teams, researchers, founders and consultants who stopped rewatching their calls.",
+    items: [
+      { q: "I used to lose an hour scrubbing for one quote. Now it's one click.", hd: "UX Researcher · early access" },
+      { q: "It found a theme across 14 interviews I'd have missed — and I replayed none of them.", hd: "Product Lead · early access" },
+      { q: "Ten meetings, one pattern, zero replays. That used to be my whole Friday.", hd: "Independent Consultant · early access" },
+      { q: "The summary's ready before I close my laptop. I never rewatch anymore.", hd: "Founder · early access" },
+      { q: "No bot joins the call, so people actually talk. Our interviews got more honest overnight.", hd: "Design Lead · early access" },
+      { q: "Roadmap calls used to end in 'wait, what did we decide?' Now the answer's right there.", hd: "Head of Product · early access" },
+      { q: "Tagging themes across a study was a full day. Tenet does it while I get coffee.", hd: "UX Researcher · early access" },
+      { q: "I bill for insight now, not for the three hours I used to spend re-listening.", hd: "Solo Consultant · early access" },
+    ],
+  },
+  finalCta: {
+    h2: { a: "Stop watching your meetings ", em: "twice." },
+    sub: "Join the waitlist and be first to record, summarize and skip the replay.",
+  },
+  footer: {
+    tagline: "AI notes for every call. Never rewatch a recording again.",
+    cols: {
+      product: { title: "Product", links: ["Source links", "Synthesis", "Waitlist"] },
+      company: { title: "Company", links: ["About", "Blog", "Careers", "Contact"] },
+      resources: { title: "Resources", links: ["Help center", "Privacy", "Terms", "Security"] },
+    },
+    copyright: "© 2026 Tenet. All rights reserved.",
+    madeFor: "Made for people who live in calls.",
+  },
+  // Server Action (waitlist) result messages, keyed by outcome.
+  waitlistMsg: {
+    invalidEmail: "Enter a valid email address.",
+    onList: "You're on the list.",
+    tooMany: "Too many attempts. Please try again later.",
+    checkInbox: "Almost there. Check your inbox to confirm.",
+    onListLaunch: "You're on the list. We'll email you at launch.",
+    error: "Something went wrong. Please try again.",
+  },
+};
+
+// Russian mirror. Structure must match `en` exactly (enforced by the Dict type).
+const ru: Dict = {
+  nav: {
+    howItWorks: "Как это работает",
+    joinWaitlist: "В лист ожидания",
+    openApp: "Открыть app",
+    openMenu: "Открыть меню",
+    switchLanguage: "Переключить язык",
+  },
+  hero: {
+    h1: { a: "Больше никогда не пересматривайте ", em: "записи." },
+    sub: "Tenet записывает, расшифровывает и суммирует каждый звонок и за секунды отдаёт готовое саммари — вы действуете по сказанному, а не пересматриваете встречу.",
+    note: "Будьте первыми, когда Tenet откроется. Одно письмо на старте, без спама.",
+  },
+  waitlist: {
+    placeholder: "you@work.com",
+    joining: "Отправляем…",
+    submit: "В лист ожидания",
+  },
+  worksWith: {
+    label: "Работает с",
+  },
+  trace: {
+    h2: { a: "Момент, а не целый ", em: "час.", b: "" },
+    lead: "Каждая строка саммари привязана к секунде, где это прозвучало. Нужно перепроверить деталь? Кликните — и попадёте точно в тот момент. Никакой перемотки, никакого таскания ползунка, никакого переслушивания часа ради десяти секунд.",
+    summary: "Саммари",
+    points: "3 пункта",
+    transcript: "Транскрипт",
+    clickPoint: "Кликните пункт →",
+    playLabel: "Воспроизвести фрагмент-источник",
+    items: [
+      {
+        text: "Большинство новых пользователей тихо отваливаются на онбординге.",
+        lines: [
+          { who: "Майя", said: "На этой неделе мы снова посмотрели на воронку активации." },
+          { who: "Дэв", said: "Честно говоря, <mark>большая часть оттока происходит на онбординге</mark>, ещё до того, как они доходят до ключевой функции." },
+          { who: "Майя", said: "Да, и это совпадает с тем, что постоянно слышит поддержка." },
+        ],
+      },
+      {
+        text: "Команда заново восстанавливает контекст между еженедельными синками.",
+        lines: [
+          { who: "Дэв", said: "Можно я сначала назову главную боль?" },
+          { who: "Дэв", said: "<mark>Мы постоянно теряем контекст между еженедельными синками</mark>, поэтому каждый раз переобсуждаем одно и то же." },
+          { who: "Майя", said: "Ага, никто не помнит, что мы решили." },
+        ],
+      },
+      {
+        text: "Цена показалась справедливой, как только они увидели сэкономленное время.",
+        lines: [
+          { who: "Майя", said: "А как вам зашла цена?" },
+          { who: "Дэв", said: "Сначала я засомневался, но <mark>когда увидел, сколько времени это экономит, она показалась совершенно справедливой</mark>." },
+          { who: "Майя", said: "Отлично, именно такой реакции мы и добиваемся." },
+        ],
+      },
+    ],
+  },
+  liveDemo: {
+    h2: { a: "В созвоне, ", em: "но не мешает.", b: "" },
+    lead: "Никакой бот не подключается, ничего не нужно вставлять. Tenet плавает сверху встречи, ведёт вас по гайду интервью и ставит таймкоды на отмеченные моменты — так что заметки почти готовы ещё до конца звонка.",
+    mark: "Отметить",
+    currentQuestion: "Текущий вопрос",
+    questions: [
+      "Расскажите, когда вы последний раз пользовались похожим инструментом.",
+      "Что вы ожидали увидеть, когда впервые открыли его?",
+      "Где вы застряли — и что вы сделали?",
+      "Что заставило вас довериться результату — или нет?",
+      "Если бы была волшебная палочка — что бы вы изменили первым делом?",
+    ],
+    nextQuestion: "Следующий вопрос →",
+    stop: "Стоп и саммари",
+    marksEmpty: "Отмеченные моменты появятся здесь с таймкодом.",
+    momentMarked: "★ Момент отмечен",
+    hint: "↑ Tenet сверху — не мешает звонку",
+    participantName: "P03 · Участник",
+    youName: "Вы",
+  },
+  appMock: {
+    newNote: "Новая заметка",
+    search: "Поиск",
+    share: "Поделиться",
+    plan: "Ранний доступ · Free",
+    today: "Сегодня",
+    yesterday: "Вчера",
+    tabs: { transcript: "Транскрипт", insights: "Инсайты", chat: "AI-чат" },
+    summaryH: "Саммари",
+    keyPointsH: "Ключевые пункты",
+    nextStepsH: "Следующие шаги",
+    jumpTo: "Перейти к",
+    listen: "Слушать запись",
+    askPlaceholder: "Спросите про эту встречу…",
+    tileP: "P03 · Участник",
+    tileYou: "Вы",
+    notes: [
+      { day: "Сегодня", title: "Установочный звонок, Acme × Northwind", meta: "10:30 · сейчас" },
+      { day: "Сегодня", title: "Еженедельный синк, Growth", meta: "9:00" },
+      { day: "Вчера", title: "Обзор роадмапа", meta: "16:15" },
+      { day: "Вчера", title: "1:1 с Прией", meta: "13:00" },
+      { day: "Вчера", title: "Клиент, Lumen Labs", meta: "11:00" },
+    ],
+    title: "Установочный звонок, Acme × Northwind",
+    meta: "11 июня · 27:14 · Вы, Майя, Дэв, Прия",
+    summary: "Активация Acme проседает на <b>онбординге</b>. Команда заново восстанавливает контекст между синками, а цена показалась справедливой, как только стало видно сэкономленное время.",
+    kp: [
+      { txt: "Большинство новых пользователей тихо отваливаются на онбординге.", ts: "12:04", who: "Дэв", q: "большая часть оттока происходит на онбординге, ещё до того, как они доходят до ключевой функции." },
+      { txt: "Команда заново восстанавливает контекст между еженедельными синками.", ts: "16:20", who: "Майя", q: "каждый синк начинается с того, что мы заново вспоминаем, на чём остановились в прошлый раз." },
+      { txt: "Цена показалась справедливой, как только они увидели сэкономленное время.", ts: "21:50", who: "Прия", q: "когда стало видно, сколько часов это экономит, цена перестала быть вопросом." },
+    ],
+    tr: [
+      { who: "Майя", src: -1, html: "Привет всем, это установочный звонок Acme и Northwind. Давайте пройдёмся по тому, где сейчас активация." },
+      { who: "Дэв", src: 0, html: "Главная проблема — <mark>большая часть оттока происходит на онбординге, ещё до того, как они доходят до ключевой функции.</mark> Люди регистрируются и пропадают." },
+      { who: "Майя", src: 1, html: "<mark>Каждый синк начинается с того, что мы заново вспоминаем, на чём остановились в прошлый раз.</mark> Это съедает первые минут десять." },
+      { who: "Прия", src: 2, html: "Сначала да, но <mark>когда стало видно, сколько часов это экономит, цена перестала быть вопросом.</mark>" },
+      { who: "Дэв", src: -1, html: "Окей, значит фокус на онбординг и на сохранение контекста. Зафиксировали." },
+    ],
+    todos: ["Разобрать отток в воронке онбординга", "Поделиться шаблоном саммари синка", "Добавить 30-секундный момент «что это умеет»"],
+    sugg: ["Что мешало больше всего?", "Цена обсуждалась?", "Упоминали конкурентов?"],
+    insights: {
+      themesH: "Ключевые темы",
+      themes: [
+        "Онбординг — главный драйвер оттока, упоминался в трёх сессиях.",
+        "Пользователи хотят увидеть готовый пример до того, как начнут доверять.",
+        "Повтор контекста между синками — сигнал отсутствующего слоя «памяти».",
+      ],
+      speakersH: "Разбивка по спикерам",
+      speakers: ["<b>Вы</b> — 42% времени разговора", "<b>Cumalala</b> — 58% времени разговора"],
+    },
+    chat: { q: "Что мешало больше всего?", a: "Онбординг — пользователи отваливаются ещё до ключевой функции.", cite: "▶ Дэв · 12:04" },
+  },
+  granola: {
+    recording: "Запись · 27:14",
+    newNote: "Новая заметка",
+    search: "Поиск",
+    today: "Сегодня",
+    yesterday: "Вчера",
+    sidebar: [
+      { name: "Установочный звонок, Acme × Northwind", when: "10:30 · сейчас" },
+      { name: "Еженедельный синк, Growth", when: "9:00" },
+      { name: "Обзор роадмапа", when: "16:15" },
+      { name: "1:1 с Прией", when: "13:00" },
+      { name: "Клиент, Lumen Labs", when: "11:00" },
+    ],
+    docTitle: "Установочный звонок, Acme × Northwind",
+    date: "11 июня",
+    attendees: "Майя, Дэв, Прия",
+    summary: "Саммари",
+    para: {
+      a: "Активация Acme проседает на ",
+      b: "онбординге",
+      c: ". Команда заново восстанавливает контекст между синками, а цена показалась справедливой, как только стало видно сэкономленное время.",
+    },
+    keyPoints: "Ключевые пункты",
+    kp: [
+      { t: "Большинство новых пользователей тихо отваливаются на онбординге.", q: "большая часть оттока происходит на онбординге, ещё до того, как они доходят до ключевой функции." },
+      { t: "Команда заново восстанавливает контекст между еженедельными синками.", q: "мы постоянно теряем контекст между синками, поэтому переобсуждаем одно и то же." },
+      { t: "Цена показалась справедливой, как только они увидели сэкономленное время.", q: "когда я увидел, сколько времени это экономит, она показалась совершенно справедливой." },
+    ],
+    seeSource: "Показать источник",
+    speaker: "Дэв",
+    jumpTo: "Перейти к",
+    nextSteps: "Следующие шаги",
+    todos: ["Разобрать отток в воронке онбординга", "Поделиться шаблоном саммари синка"],
+    ask: "Спросите что угодно об этой встрече…",
+  },
+  synthesis: {
+    h2: { a: "Закономерность находит вас ", em: "сама.", b: "" },
+    lead: "Один звонок — это заметка. Двадцать — уже сигнал. Tenet читает их все и сам выносит наверх повторяющиеся темы — вы видите картину, не переслушав ни одной встречи.",
+    keypts: [
+      { b: "Темы всплывают сами", rest: " — по всем интервью и звонкам, а не по одному транскрипту за раз." },
+      { b: "Доказательство в один клик.", rest: " Каждая тема рядом с моментами, которые её подтверждают." },
+    ],
+    panelTitle: "Повторяющиеся темы",
+    conversations: "12 разговоров",
+    themes: [
+      { name: "Отток на онбординге", count: "8 источников" },
+      { name: "Потеря контекста между синками", count: "5 источников" },
+      { name: "Цена справедлива после ценности", count: "4 источника" },
+    ],
+    view: "Открыть ↗",
+  },
+  roles: {
+    h2: { a: "Для тех, кто живёт в ", em: "звонках.", b: "" },
+    items: [
+      { rl: "Продуктовые команды", p: "Каждый звонок с клиентом и командой — в решения через пару минут после завершения." },
+      { rl: "UX-исследователи", p: "Десяток интервью — и готовые темы, без переслушивания хоть одного." },
+      { rl: "Основатели", p: "Звонки с инвесторами, клиентами и кандидатами — в саммари. Читайте, а не пересматривайте." },
+      { rl: "Консультанты", p: "Берите оплату за инсайт, а не за часы пересмотра записей." },
+    ],
+  },
+  testimonials: {
+    h2: { a: "Часы назад — каждую ", em: "неделю." },
+    lead: "Первые продуктовые команды, исследователи, основатели и консультанты, которые перестали пересматривать звонки.",
+    items: [
+      { q: "Раньше я теряла час, отматывая ради одной цитаты. Теперь — один клик.", hd: "UX-исследователь · ранний доступ" },
+      { q: "Он нашёл тему по 14 интервью, которую я бы пропустил, — и не пересмотрел ни одного.", hd: "Product Lead · ранний доступ" },
+      { q: "Десять встреч, одна закономерность, ноль пересмотров. А раньше на это уходила вся пятница.", hd: "Независимый консультант · ранний доступ" },
+      { q: "Саммари готово раньше, чем я закрою ноут. Я больше ничего не пересматриваю.", hd: "Основатель · ранний доступ" },
+      { q: "Бот не вваливается в звонок, поэтому люди говорят открыто. Интервью сразу стали честнее.", hd: "Design Lead · ранний доступ" },
+      { q: "Раньше звонки по роадмапу кончались на «так, а что мы решили?». Теперь ответ сразу под рукой.", hd: "Head of Product · ранний доступ" },
+      { q: "Разметка тем по исследованию занимала целый день. Tenet делает это, пока я наливаю кофе.", hd: "UX-исследователь · ранний доступ" },
+      { q: "Теперь я беру оплату за инсайт, а не за те три часа переслушивания.", hd: "Консультант-одиночка · ранний доступ" },
+    ],
+  },
+  finalCta: {
+    h2: { a: "Хватит смотреть встречи ", em: "дважды." },
+    sub: "Вступайте в лист ожидания — первыми записывайте, суммируйте и пропускайте повтор.",
+  },
+  footer: {
+    tagline: "AI-заметки для каждого звонка. Больше никогда не пересматривайте записи.",
+    cols: {
+      product: { title: "Продукт", links: ["Ссылки на источник", "Синтез", "Лист ожидания"] },
+      company: { title: "Компания", links: ["О нас", "Блог", "Карьера", "Контакты"] },
+      resources: { title: "Ресурсы", links: ["Центр помощи", "Конфиденциальность", "Условия", "Безопасность"] },
+    },
+    copyright: "© 2026 Tenet. Все права защищены.",
+    madeFor: "Создано для тех, кто живёт в звонках.",
+  },
+  waitlistMsg: {
+    invalidEmail: "Введите корректный email.",
+    onList: "Вы в списке.",
+    tooMany: "Слишком много попыток. Попробуйте позже.",
+    checkInbox: "Почти готово. Проверьте почту для подтверждения.",
+    onListLaunch: "Вы в списке. Напишем вам на старте.",
+    error: "Что-то пошло не так. Попробуйте ещё раз.",
+  },
+};
+
+// English is the canonical shape; Russian must conform to it.
+export type Dict = typeof en;
+
+export const dictionaries: Record<Locale, Dict> = { en, ru };
+
+export function getDictionary(locale: Locale): Dict {
+  return dictionaries[locale] ?? dictionaries[DEFAULT_LOCALE];
+}

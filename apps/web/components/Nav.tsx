@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDict } from "@/lib/i18n";
+import { LangToggle } from "./LangToggle";
+import { Logo } from "./Logo";
 
 function focusWaitlist() {
   if (typeof document === "undefined") return;
@@ -12,6 +15,7 @@ function focusWaitlist() {
 }
 
 export function Nav() {
+  const t = useDict();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -27,19 +31,20 @@ export function Nav() {
       <nav className={`nav${scrolled ? " scrolled" : ""}`}>
         <div className="wrap row">
           <div className="brand">
-            <span className="dot" /> Tenet
+            <Logo size={20} /> Tenet
           </div>
           <div className="nav-links">
-            <a href="#trace">How it works</a>
+            <a href="#trace">{t.nav.howItWorks}</a>
           </div>
           <div className="nav-cta">
+            <LangToggle />
             <button className="btn btn-primary" onClick={focusWaitlist}>
-              Join the waitlist
+              {t.nav.joinWaitlist}
             </button>
             <button
               id="navToggle"
               className="navtoggle"
-              aria-label="Open menu"
+              aria-label={t.nav.openMenu}
               onClick={() => {
                 setMenuOpen((o) => !o);
                 document.getElementById("mobileMenu")?.classList.toggle("open");
@@ -54,11 +59,12 @@ export function Nav() {
       </nav>
       <div className={`mobilemenu${menuOpen ? " open" : ""}`} id="mobileMenu">
         <a href="#trace" onClick={() => setMenuOpen(false)}>
-          How it works
+          {t.nav.howItWorks}
         </a>
         <div className="mm-cta">
+          <LangToggle />
           <button className="btn btn-primary" onClick={focusWaitlist}>
-            Join the waitlist
+            {t.nav.joinWaitlist}
           </button>
         </div>
       </div>

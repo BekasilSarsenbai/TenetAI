@@ -1,9 +1,14 @@
+"use client";
+
+import { useDict } from "@/lib/i18n";
+
 export function WorksWith() {
+  const t = useDict();
   return (
     <section className="section worksstrip">
       <div className="wrap">
         <div className="trust">
-          <span className="lbl">Works with</span>
+          <span className="lbl">{t.worksWith.label}</span>
           <div className="logos">
             <span className="logo">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

@@ -1,5 +1,8 @@
 "use client";
 
+import { useDict } from "@/lib/i18n";
+import { Logo } from "./Logo";
+
 function focusWaitlist() {
   window.scrollTo({ top: 0, behavior: "smooth" });
   const inp = document.querySelector<HTMLInputElement>("#waitlistTop input");
@@ -7,24 +10,27 @@ function focusWaitlist() {
 }
 
 export function Footer() {
+  const t = useDict();
+  const { product, company, resources } = t.footer.cols;
+
   return (
     <footer className="footer">
       <div className="wrap">
         <div className="footcols">
           <div>
             <div className="brand">
-              <span className="dot" /> Tenet
+              <Logo size={20} /> Tenet
             </div>
-            <p className="tag2">The AI notetaker built around trust. Every insight traced to its source.</p>
+            <p className="tag2">{t.footer.tagline}</p>
           </div>
           <div className="fcol">
-            <h5>Product</h5>
+            <h5>{product.title}</h5>
             <ul>
               <li>
-                <a href="#trace">Source links</a>
+                <a href="#trace">{product.links[0]}</a>
               </li>
               <li>
-                <a href="#synthesis">Synthesis</a>
+                <a href="#synthesis">{product.links[1]}</a>
               </li>
               <li>
                 <a
@@ -34,33 +40,35 @@ export function Footer() {
                     focusWaitlist();
                   }}
                 >
-                  Waitlist
+                  {product.links[2]}
                 </a>
               </li>
             </ul>
           </div>
           <div className="fcol">
-            <h5>Company</h5>
+            <h5>{company.title}</h5>
             <ul>
-              <li><a href="#">About</a></li>
-              <li><a href="#">Blog</a></li>
-              <li><a href="#">Careers</a></li>
-              <li><a href="#">Contact</a></li>
+              {company.links.map((link) => (
+                <li key={link}>
+                  <a href="#">{link}</a>
+                </li>
+              ))}
             </ul>
           </div>
           <div className="fcol">
-            <h5>Resources</h5>
+            <h5>{resources.title}</h5>
             <ul>
-              <li><a href="#">Help center</a></li>
-              <li><a href="#">Privacy</a></li>
-              <li><a href="#">Terms</a></li>
-              <li><a href="#">Security</a></li>
+              {resources.links.map((link) => (
+                <li key={link}>
+                  <a href="#">{link}</a>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
         <div className="footbar">
-          <span>© 2026 Tenet. All rights reserved.</span>
-          <span>Made for people who reuse what was said.</span>
+          <span>{t.footer.copyright}</span>
+          <span>{t.footer.madeFor}</span>
         </div>
       </div>
     </footer>

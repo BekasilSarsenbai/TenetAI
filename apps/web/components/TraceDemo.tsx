@@ -1,52 +1,39 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { getDictionary } from "@/lib/dictionaries";
+import { useDict, useLocale } from "@/lib/i18n";
 
-type Line = { who: string; said: string; source?: boolean };
-type Point = { id: number; text: string; time: string; seg: [number, number]; transcript: Line[] };
+type Point = { id: number; text: string; time: string; seg: [number, number]; transcript: { who: string; said: string; source?: boolean }[] };
 
-const DATA: Point[] = [
-  {
-    id: 0,
-    text: "Onboarding is where most new users quietly drop off.",
-    time: "12:04",
-    seg: [26, 40],
-    transcript: [
-      { who: "Maya", said: "So we looked at the activation funnel again this week." },
-      { who: "Dev", said: "Honestly, <mark>most of the drop-off happens during onboarding</mark>, before they ever reach the core feature.", source: true },
-      { who: "Maya", said: "Right, and that matches what support keeps hearing." },
-    ],
-  },
-  {
-    id: 1,
-    text: "The team keeps re-doing context between weekly syncs.",
-    time: "04:12",
-    seg: [6, 18],
-    transcript: [
-      { who: "Dev", said: "Can I name the biggest pain first?" },
-      { who: "Dev", said: "<mark>We keep losing context between the weekly syncs</mark>, so we redo the same conversation every time.", source: true },
-      { who: "Maya", said: "Yeah, nobody remembers what we decided." },
-    ],
-  },
-  {
-    id: 2,
-    text: "Pricing felt fair the moment they saw the time saved.",
-    time: "21:37",
-    seg: [44, 58],
-    transcript: [
-      { who: "Maya", said: "And how did the price land for you?" },
-      { who: "Dev", said: "At first it gave me pause, but <mark>once I saw how much time it saved, it felt completely fair</mark>.", source: true },
-      { who: "Maya", said: "Good, that's the reaction we're going for." },
-    ],
-  },
+// Locale-independent layout per summary point: which waveform segment it maps
+// to, its timestamp, and which transcript line is the highlighted source.
+const STATIC = [
+  { time: "12:04", seg: [26, 40] as [number, number], sourceIdx: 1 },
+  { time: "04:12", seg: [6, 18] as [number, number], sourceIdx: 1 },
+  { time: "21:37", seg: [44, 58] as [number, number], sourceIdx: 1 },
 ];
 
+function buildData(locale: "en" | "ru"): Point[] {
+  const d = getDictionary(locale);
+  return d.trace.items.map((it, i) => ({
+    id: i,
+    text: it.text,
+    time: STATIC[i].time,
+    seg: STATIC[i].seg,
+    transcript: it.lines.map((l, j) => ({ who: l.who, said: l.said, source: j === STATIC[i].sourceIdx })),
+  }));
+}
+
 export function TraceDemo() {
+  const t = useDict();
+  const { locale } = useLocale();
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const scope = root.current;
     if (!scope) return;
+    const DATA = buildData(locale);
     const $ = <T extends Element>(sel: string) => scope.querySelector<T>(sel);
 
     const BAR_COUNT = 64;
@@ -74,7 +61,7 @@ export function TraceDemo() {
     const playBtn = $("#play")!;
     const playIcon = $("#playIcon")!;
 
-    // reset (guards against StrictMode double-mount)
+    // reset (guards against StrictMode double-mount + locale rebuild)
     insightsEl.innerHTML = "";
     waveEl.querySelectorAll(".bar").forEach((b) => b.remove());
 
@@ -228,18 +215,17 @@ export function TraceDemo() {
       cancelAnimationFrame(raf);
       clearInterval(cycle);
     };
-  }, []);
+  }, [locale]);
 
   return (
     <section className="section" id="trace">
       <div className="wrap">
         <h2>
-          Don&apos;t take the AI&apos;s <em>word</em> for it.
+          {t.trace.h2.a}
+          <em>{t.trace.h2.em}</em>
+          {t.trace.h2.b}
         </h2>
-        <p className="lead">
-          Every line in your summary is linked to the moment it came from. Click one to jump straight to the source,
-          no scrubbing, no re-listening.
-        </p>
+        <p className="lead">{t.trace.lead}</p>
 
         <div className="demo" ref={root}>
           <div className="demo-figure" id="figure">
@@ -251,22 +237,22 @@ export function TraceDemo() {
 
             <div className="panel left">
               <div className="panel-head">
-                <span className="h">Summary</span>
-                <span className="hint">3 points</span>
+                <span className="h">{t.trace.summary}</span>
+                <span className="hint">{t.trace.points}</span>
               </div>
               <div className="insights" id="insights" />
             </div>
 
             <div className="panel right">
               <div className="panel-head">
-                <span className="h">Transcript</span>
+                <span className="h">{t.trace.transcript}</span>
                 <span className="hint">
-                  <b>Click a point →</b>
+                  <b>{t.trace.clickPoint}</b>
                 </span>
               </div>
               <div className="transcript" id="transcript" />
               <div className="player">
-                <button className="play" id="play" aria-label="Play source clip">
+                <button className="play" id="play" aria-label={t.trace.playLabel}>
                   <svg id="playIcon" viewBox="0 0 12 14" fill="currentColor">
                     <path d="M0 0l12 7L0 14z" />
                   </svg>

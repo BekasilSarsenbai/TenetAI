@@ -1,27 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-const KP = [
-  {
-    t: "Onboarding is where most new users quietly drop off.",
-    q: "most of the drop-off happens during onboarding, before they ever reach the core feature.",
-    ts: "12:04",
-    who: "Dev",
-  },
-  {
-    t: "The team keeps re-doing context between weekly syncs.",
-    q: "we keep losing context between the weekly syncs, so we redo the same conversation.",
-    ts: "04:12",
-    who: "Dev",
-  },
-  {
-    t: "Pricing felt fair the moment they saw the time saved.",
-    q: "once I saw how much time it saved, it felt completely fair.",
-    ts: "21:37",
-    who: "Dev",
-  },
-];
+import { useDict } from "@/lib/i18n";
 
 const MagIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +10,12 @@ const MagIcon = () => (
   </svg>
 );
 
+// Fixed timestamps per key point; text/quote/speaker are localized.
+const KP_TS = ["12:04", "04:12", "21:37"];
+
 export function GranolaMock() {
+  const t = useDict();
+  const g = t.granola;
   const [open, setOpen] = useState(0);
 
   return (
@@ -46,7 +31,7 @@ export function GranolaMock() {
             <span className="tname">Tenet</span>
             <span className="rec">
               <span className="rd" />
-              Recording · 27:14
+              {g.recording}
             </span>
           </div>
           <div className="grid">
@@ -55,60 +40,65 @@ export function GranolaMock() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="M12 5v14M5 12h14" />
                 </svg>{" "}
-                New note
+                {g.newNote}
               </div>
               <div className="ssearch">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <circle cx="11" cy="11" r="7" />
                   <path d="M21 21l-4-4" />
                 </svg>{" "}
-                Search
+                {g.search}
               </div>
-              <div className="sgrp">Today</div>
+              <div className="sgrp">{g.today}</div>
               <button className="sitem on">
-                Discovery call, Acme × Northwind
-                <span className="d">10:30 AM · live</span>
+                {g.sidebar[0].name}
+                <span className="d">{g.sidebar[0].when}</span>
               </button>
               <button className="sitem">
-                Weekly sync, Growth<span className="d">9:00 AM</span>
+                {g.sidebar[1].name}
+                <span className="d">{g.sidebar[1].when}</span>
               </button>
-              <div className="sgrp">Yesterday</div>
+              <div className="sgrp">{g.yesterday}</div>
               <button className="sitem">
-                Roadmap review<span className="d">4:15 PM</span>
+                {g.sidebar[2].name}
+                <span className="d">{g.sidebar[2].when}</span>
               </button>
               <button className="sitem">
-                1:1 with Priya<span className="d">1:00 PM</span>
+                {g.sidebar[3].name}
+                <span className="d">{g.sidebar[3].when}</span>
               </button>
               <button className="sitem">
-                Customer, Lumen Labs<span className="d">11:00 AM</span>
+                {g.sidebar[4].name}
+                <span className="d">{g.sidebar[4].when}</span>
               </button>
             </aside>
             <div className="doc">
-              <div className="dtitle">Discovery call, Acme × Northwind</div>
+              <div className="dtitle">{g.docTitle}</div>
               <div className="dmeta">
-                <span>Jun 11</span>
+                <span>{g.date}</span>
                 <span className="dot" />
                 <span>27:14</span>
                 <span className="dot" />
-                <span className="who">Maya, Dev, Priya</span>
+                <span className="who">{g.attendees}</span>
               </div>
               <div className="drule" />
-              <div className="sec">Summary</div>
+              <div className="sec">{g.summary}</div>
               <p className="para">
-                Acme&apos;s activation is leaking at <b>onboarding</b>. The team keeps re-doing context between weekly
-                syncs, and pricing felt fair once the time saved was clear.
+                {g.para.a}
+                <b>{g.para.b}</b>
+                {g.para.c}
               </p>
-              <div className="sec">Key points</div>
+              <div className="sec">{g.keyPoints}</div>
               <div>
-                {KP.map((k, i) => (
-                  <div className={`kpwrap${open === i ? " on" : ""}`} key={k.ts}>
+                {g.kp.map((k, i) => (
+                  <div className={`kpwrap${open === i ? " on" : ""}`} key={KP_TS[i]}>
                     <div className="kp">
                       <span className="bd" />
                       <span className="kt">{k.t}</span>
                       <button
                         className="mag"
-                        title="See source"
-                        aria-label="See source"
+                        title={g.seeSource}
+                        aria-label={g.seeSource}
                         onClick={() => setOpen(open === i ? -1 : i)}
                       >
                         <MagIcon />
@@ -117,25 +107,25 @@ export function GranolaMock() {
                     <div className="src">
                       <p className="q">&quot;{k.q}&quot;</p>
                       <div className="sm">
-                        <span className="pp">&#9654;</span> Jump to {k.ts}{" "}
-                        <span className="who">· {k.who}</span>
+                        <span className="pp">&#9654;</span> {g.jumpTo} {KP_TS[i]}{" "}
+                        <span className="who">· {g.speaker}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="sec">Next steps</div>
+              <div className="sec">{g.nextSteps}</div>
               <div className="todo">
-                <span className="cb" /> Audit onboarding funnel drop-off
+                <span className="cb" /> {g.todos[0]}
               </div>
               <div className="todo">
-                <span className="cb" /> Share weekly-sync recap template
+                <span className="cb" /> {g.todos[1]}
               </div>
               <div className="ask">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
                 </svg>
-                <span className="ph">Ask anything about this meeting…</span>
+                <span className="ph">{g.ask}</span>
                 <span className="kbd">⌘J</span>
               </div>
             </div>

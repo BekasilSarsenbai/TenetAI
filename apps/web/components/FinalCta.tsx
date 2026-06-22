@@ -1,6 +1,10 @@
+"use client";
+
+import { useDict } from "@/lib/i18n";
 import { WaitlistForm } from "./WaitlistForm";
 
 export function FinalCta() {
+  const t = useDict();
   return (
     <section className="finalcta">
       <video className="ctabg" autoPlay muted loop playsInline aria-hidden="true" poster="/og/closing-poster.jpg">
@@ -8,10 +12,11 @@ export function FinalCta() {
       </video>
       <div className="wrap">
         <h2>
-          Notes you can finally <em>trust.</em>
+          {t.finalCta.h2.a}
+          <em>{t.finalCta.h2.em}</em>
         </h2>
         <p className="sub" style={{ margin: "18px auto 0" }}>
-          Join the waitlist, be first to record, summarize and verify with Tenet.
+          {t.finalCta.sub}
         </p>
         <WaitlistForm id="waitlistBottom" />
       </div>

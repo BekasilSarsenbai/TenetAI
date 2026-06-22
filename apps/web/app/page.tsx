@@ -1,8 +1,7 @@
 import { Nav } from "@/components/Nav";
 import { Hero } from "@/components/Hero";
 import { WorksWith } from "@/components/WorksWith";
-import { TraceDemo } from "@/components/TraceDemo";
-import { Synthesis } from "@/components/Synthesis";
+import { LiveDemo } from "@/components/LiveDemo";
 import { Roles } from "@/components/Roles";
 import { Testimonials } from "@/components/Testimonials";
 import { FinalCta } from "@/components/FinalCta";
@@ -15,8 +14,7 @@ export default function Home() {
       <Nav />
       <Hero />
       <WorksWith />
-      <TraceDemo />
-      <Synthesis />
+      <LiveDemo />
       <Roles />
       <Testimonials />
       <FinalCta />

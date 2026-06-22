@@ -16,7 +16,9 @@ dist/
 .DS_Store
 *.log
 .vercel
+.vercel_web_backup/
 coverage/
 
 # large media kept out of git (served from Blob/CDN in prod)
 apps/web/public/video/*.mp4
+.gstack/
