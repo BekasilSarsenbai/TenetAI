@@ -5,6 +5,14 @@ import { MEETINGS, fmt, type Meeting, type MeetingSummary, type TranscriptSegmen
 import type { AppUser } from "@/lib/types";
 import type { RecordResult } from "@/lib/useRecorder";
 import { buildReport, buildTranscript, mimeExt, safeName } from "@/lib/report";
+import {
+  createMeeting,
+  deleteMeetingRow,
+  listMeetings,
+  renameMeetingRow,
+  supabaseEnabled,
+  updateMeetingContent,
+} from "@/lib/meetings";
 import { Sidebar } from "./Sidebar";
 import { HomeView } from "./HomeView";
 import { NoteView } from "./NoteView";
@@ -36,7 +44,10 @@ const PROC_STEPS = ["Transcribing audio", "Finding key points", "Linking each po
 type StepState = "" | "on" | "done";
 
 export function TenetApp({ user }: { user: AppUser }) {
-  const [meetings, setMeetings] = useState<Meeting[]>(MEETINGS);
+  // Real signed-in user with Supabase configured → persist to the DB.
+  // Otherwise (demo user / no Supabase) keep the in-memory showcase dataset.
+  const persist = supabaseEnabled && user.id !== "demo";
+  const [meetings, setMeetings] = useState<Meeting[]>(persist ? [] : MEETINGS);
   const [view, setView] = useState<View>("home");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,6 +68,18 @@ export function TenetApp({ user }: { user: AppUser }) {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [exportOpen]);
+
+  // Load the signed-in user's saved sessions from the DB.
+  useEffect(() => {
+    if (!persist) return;
+    let alive = true;
+    listMeetings().then((rows) => {
+      if (alive) setMeetings(rows);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [persist]);
 
   function showToast(t: string) {
     setToast(t);
@@ -108,6 +131,7 @@ export function TenetApp({ user }: { user: AppUser }) {
     const t = title.trim();
     if (!t) return;
     setMeetings((m) => m.map((x) => (x.id === id ? { ...x, title: t } : x)));
+    if (persist) void renameMeetingRow(id, t);
   }
 
   function deleteMeeting(id: string) {
@@ -121,6 +145,7 @@ export function TenetApp({ user }: { user: AppUser }) {
       setActiveId(null);
       setView("home");
     }
+    if (persist) void deleteMeetingRow(id);
     showToast("Session deleted.");
   }
 
@@ -216,7 +241,7 @@ export function TenetApp({ user }: { user: AppUser }) {
 
     if (reduce) {
       setProc(null);
-      finishProcessing({ ...seed, transcript, summary });
+      await finishProcessing({ ...seed, transcript, summary });
       return;
     }
 
@@ -224,11 +249,40 @@ export function TenetApp({ user }: { user: AppUser }) {
     setProc(["done", "done", "on"]);
     await wait(450);
     setProc(null);
-    finishProcessing({ ...seed, transcript, summary });
+    await finishProcessing({ ...seed, transcript, summary });
   }
 
-  function finishProcessing(seed?: NoteSeed) {
+  async function finishProcessing(seed?: NoteSeed) {
     setProc(null);
+
+    const toast = seed?.summary
+      ? "Notes ready — AI recap, key points and transcript."
+      : seed?.transcript
+      ? "Transcript ready — tap any line to jump to that moment."
+      : seed?.blob
+      ? "Recording saved, but transcription failed — open it to retry."
+      : "Notes ready — every point linked to its source.";
+
+    // Persist to the DB (uploads audio + inserts the row) and use the saved
+    // record, which carries a real id and a signed audio URL.
+    if (persist) {
+      const saved = await createMeeting({
+        title: seed?.title || "New session",
+        who: "You",
+        durSec: seed?.durSec,
+        blob: seed?.blob,
+        transcript: seed?.transcript,
+        summary: seed?.summary,
+      });
+      if (saved) {
+        setMeetings((m) => [saved, ...m]);
+        openNote(saved.id);
+        showToast(toast);
+        return;
+      }
+      // Save failed — fall back to a local note so the user keeps their work.
+    }
+
     const nm: Meeting = {
       id: "new" + Date.now(),
       day: "Today",
@@ -244,15 +298,7 @@ export function TenetApp({ user }: { user: AppUser }) {
     };
     setMeetings((m) => [nm, ...m]);
     openNote(nm.id);
-    showToast(
-      seed?.summary
-        ? "Notes ready — AI recap, key points and transcript."
-        : seed?.transcript
-        ? "Transcript ready — tap any line to jump to that moment."
-        : seed?.blob
-        ? "Recording saved, but transcription failed — open it to retry."
-        : "Notes ready — every point linked to its source."
-    );
+    showToast(toast);
   }
 
   // Re-run transcription + summary for an existing recording (after a failure).
@@ -303,6 +349,7 @@ export function TenetApp({ user }: { user: AppUser }) {
 
     setProc(null);
     setMeetings((list) => list.map((x) => (x.id === id ? { ...x, transcript, summary } : x)));
+    if (persist && transcript) void updateMeetingContent(id, { transcript, summary });
     showToast(transcript ? "Transcript ready." : "Still couldn't transcribe — check the audio and mic.");
   }
 
@@ -350,7 +397,7 @@ export function TenetApp({ user }: { user: AppUser }) {
         </div>
 
         <div className="stage">
-          <HomeView show={view === "home"} meetings={meetings} onAct={doAct} onOpen={openNote} />
+          <HomeView show={view === "home"} meetings={meetings} onAct={doAct} onOpen={openNote} name={user.name} />
           {activeMeeting && (
             <NoteView
               show={view === "note"}

@@ -15,16 +15,19 @@ export function HomeView({
   meetings,
   onAct,
   onOpen,
+  name,
 }: {
   show: boolean;
   meetings: Meeting[];
   onAct: (act: SessionAct) => void;
   onOpen: (id: string) => void;
+  name?: string;
 }) {
+  const first = (name || "there").trim().split(/\s+/)[0];
   return (
     <div className={`view viewHome${show ? " show" : ""}`}>
       <div className="home">
-        <div className="greet">Good afternoon, Beka.</div>
+        <div className="greet">Welcome back, {first}.</div>
         <div className="greet-sub">Start a session, or open a recent one.</div>
         <div className="actions">
           {ACTIONS.map((a) => (
