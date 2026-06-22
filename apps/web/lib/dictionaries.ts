@@ -18,6 +18,10 @@ const en = {
     openMenu: "Open menu",
     switchLanguage: "Switch language",
   },
+  cta: {
+    getStarted: "Get started free",
+    signIn: "Sign in",
+  },
   pricing: {
     h2: { a: "Simple, honest ", em: "pricing", b: "." },
     sub: "Start free. Upgrade when Tenet saves you more time than it costs.",
@@ -32,7 +36,7 @@ const en = {
       free: {
         name: "Free",
         note: "Try the full loop, free forever.",
-        cta: "Join the waitlist",
+        cta: "Get started",
         features: [
           "5 hours of recording / month",
           "Record → transcript → summary",
@@ -44,7 +48,7 @@ const en = {
         name: "Pro",
         badge: "Most popular",
         note: "For people who live in calls.",
-        cta: "Join the waitlist",
+        cta: "Get started",
         features: [
           "Everything in Free",
           "~25 hours / month",
@@ -268,7 +272,7 @@ const en = {
   footer: {
     tagline: "AI notes for every call. Never rewatch a recording again.",
     cols: {
-      product: { title: "Product", links: ["Source links", "Synthesis", "Waitlist"] },
+      product: { title: "Product", links: ["Source links", "Synthesis", "Sign in"] },
       company: { title: "Company", links: ["About", "Blog", "Careers", "Contact"] },
       resources: { title: "Resources", links: ["Help center", "Privacy", "Terms", "Security"] },
     },
@@ -296,6 +300,10 @@ const ru: Dict = {
     openMenu: "Открыть меню",
     switchLanguage: "Переключить язык",
   },
+  cta: {
+    getStarted: "Начать бесплатно",
+    signIn: "Войти",
+  },
   pricing: {
     h2: { a: "Простой и честный ", em: "прайсинг", b: "." },
     sub: "Начни бесплатно. Переходи на Pro, когда Tenet экономит больше времени, чем стоит.",
@@ -310,7 +318,7 @@ const ru: Dict = {
       free: {
         name: "Free",
         note: "Попробуй весь цикл, бесплатно.",
-        cta: "В лист ожидания",
+        cta: "Начать",
         features: [
           "5 часов записи в месяц",
           "Запись → транскрипт → саммари",
@@ -322,7 +330,7 @@ const ru: Dict = {
         name: "Pro",
         badge: "Популярный",
         note: "Для тех, кто живёт в созвонах.",
-        cta: "В лист ожидания",
+        cta: "Начать",
         features: [
           "Всё из Free",
           "~25 часов в месяц",
@@ -546,7 +554,7 @@ const ru: Dict = {
   footer: {
     tagline: "AI-заметки для каждого звонка. Больше никогда не пересматривайте записи.",
     cols: {
-      product: { title: "Продукт", links: ["Ссылки на источник", "Синтез", "Лист ожидания"] },
+      product: { title: "Продукт", links: ["Ссылки на источник", "Синтез", "Войти"] },
       company: { title: "Компания", links: ["О нас", "Блог", "Карьера", "Контакты"] },
       resources: { title: "Ресурсы", links: ["Центр помощи", "Конфиденциальность", "Условия", "Безопасность"] },
     },

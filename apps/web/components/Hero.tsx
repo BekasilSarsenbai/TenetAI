@@ -1,7 +1,7 @@
 "use client";
 
 import { useDict } from "@/lib/i18n";
-import { WaitlistForm } from "./WaitlistForm";
+import { SIGN_IN_URL } from "@/lib/app-url";
 import { AppMock } from "./AppMock";
 
 export function Hero() {
@@ -19,7 +19,10 @@ export function Hero() {
         </h1>
         <p className="sub">{t.hero.sub}</p>
 
-        <WaitlistForm id="waitlistTop" />
+        <div className="hero-cta">
+          <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
+          <a className="btn btn-soft" href={SIGN_IN_URL}>{t.cta.signIn}</a>
+        </div>
       </div>
 
       <div className="wrap">

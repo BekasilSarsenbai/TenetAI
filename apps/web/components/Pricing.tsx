@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useDict } from "@/lib/i18n";
+import { SIGN_IN_URL } from "@/lib/app-url";
 
 // Prices are locale-independent, so they live here (not in the dictionary).
 // Annual = 10x the monthly rate (≈2 months free); shown as the effective /mo.
@@ -12,13 +13,6 @@ const PRICE = {
 } as const;
 
 const ORDER = ["free", "pro", "team"] as const;
-
-function joinWaitlist() {
-  if (typeof document === "undefined") return;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  const input = document.querySelector<HTMLInputElement>("#waitlistTop input");
-  if (input) setTimeout(() => input.focus(), 320);
-}
 
 export function Pricing() {
   const t = useDict();
@@ -77,12 +71,9 @@ export function Pricing() {
                   {!isFree && <span className="per">{per}</span>}
                 </div>
                 <div className="note">{plan.note}</div>
-                <button
-                  className={`btn ${popular ? "btn-primary" : "btn-soft"}`}
-                  onClick={joinWaitlist}
-                >
+                <a className={`btn ${popular ? "btn-primary" : "btn-soft"}`} href={SIGN_IN_URL}>
                   {plan.cta}
-                </button>
+                </a>
                 <ul>
                   {plan.features.map((f) => (
                     <li key={f}><span className="tick" />{f}</li>

@@ -2,17 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useDict } from "@/lib/i18n";
+import { SIGN_IN_URL } from "@/lib/app-url";
 import { LangToggle } from "./LangToggle";
 import { Logo } from "./Logo";
-
-function focusWaitlist() {
-  if (typeof document === "undefined") return;
-  const menu = document.getElementById("mobileMenu");
-  menu?.classList.remove("open");
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  const inp = document.querySelector<HTMLInputElement>("#waitlistTop input");
-  if (inp) setTimeout(() => inp.focus(), 320);
-}
 
 export function Nav() {
   const t = useDict();
@@ -39,9 +31,8 @@ export function Nav() {
           </div>
           <div className="nav-cta">
             <LangToggle />
-            <button className="btn btn-primary" onClick={focusWaitlist}>
-              {t.nav.joinWaitlist}
-            </button>
+            <a className="btn btn-ghost nav-signin" href={SIGN_IN_URL}>{t.cta.signIn}</a>
+            <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
             <button
               id="navToggle"
               className="navtoggle"
@@ -67,9 +58,7 @@ export function Nav() {
         </a>
         <div className="mm-cta">
           <LangToggle />
-          <button className="btn btn-primary" onClick={focusWaitlist}>
-            {t.nav.joinWaitlist}
-          </button>
+          <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
         </div>
       </div>
     </>

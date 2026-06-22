@@ -1,13 +1,8 @@
 "use client";
 
 import { useDict } from "@/lib/i18n";
+import { SIGN_IN_URL } from "@/lib/app-url";
 import { Logo } from "./Logo";
-
-function focusWaitlist() {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  const inp = document.querySelector<HTMLInputElement>("#waitlistTop input");
-  if (inp) setTimeout(() => inp.focus(), 320);
-}
 
 export function Footer() {
   const t = useDict();
@@ -33,15 +28,7 @@ export function Footer() {
                 <a href="#synthesis">{product.links[1]}</a>
               </li>
               <li>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    focusWaitlist();
-                  }}
-                >
-                  {product.links[2]}
-                </a>
+                <a href={SIGN_IN_URL}>{product.links[2]}</a>
               </li>
             </ul>
           </div>

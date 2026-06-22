@@ -1,7 +1,7 @@
 "use client";
 
 import { useDict } from "@/lib/i18n";
-import { WaitlistForm } from "./WaitlistForm";
+import { SIGN_IN_URL } from "@/lib/app-url";
 
 export function FinalCta() {
   const t = useDict();
@@ -18,7 +18,9 @@ export function FinalCta() {
         <p className="sub" style={{ margin: "18px auto 0" }}>
           {t.finalCta.sub}
         </p>
-        <WaitlistForm id="waitlistBottom" />
+        <div className="hero-cta" style={{ justifyContent: "center" }}>
+          <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
+        </div>
       </div>
     </section>
   );
