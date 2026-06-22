@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${base}/?confirm=invalid`);
   }
 
-  const { getDb, waitlistSignups } = await import("@tenet/db");
+  const { getDb, waitlistSignups } = await import("@/lib/db");
   const { eq } = await import("drizzle-orm");
   const db = getDb();
 
