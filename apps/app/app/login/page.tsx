@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -38,7 +39,7 @@ export default function LoginPage() {
     <div className="login-wrap">
       <div className="login-card">
         <div className="login-brand">
-          <span className="d" />
+          <Logo size={20} />
           <b>Tenet</b>
         </div>
 

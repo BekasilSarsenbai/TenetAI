@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import type { Meeting } from "@/lib/data";
 import type { AppUser } from "@/lib/types";
 import { Plus, Search } from "./icons";
+import { Logo } from "./Logo";
 
 export function Sidebar({
   meetings,
@@ -58,7 +59,7 @@ export function Sidebar({
   return (
     <aside className="side">
       <button className="brand" onClick={onBrand}>
-        <span className="d" />
+        <Logo size={22} />
         <b>Tenet</b>
       </button>
       <button className="newbtn" onClick={onNew}>
@@ -89,10 +90,8 @@ export function Sidebar({
               ) : (
                 <div className={`mi-wrap${m.id === activeId ? " on" : ""}`}>
                   <button className="mi" onClick={() => onOpen(m.id)}>
-                    {m.title}
-                    <small>
-                      {m.time} · {m.dur}
-                    </small>
+                    <div className="mi-name">{m.title}</div>
+                    <div className="mi-meta">{m.time} · {m.dur}</div>
                   </button>
                   <button
                     className="mi-more"
@@ -118,7 +117,10 @@ export function Sidebar({
       </div>
       <button className="foot" onClick={onProfile}>
         <span className="av">{user.name[0].toUpperCase()}</span>
-        {user.name} · early access
+        <span>
+          <span className="sf-name">{user.name}</span>
+          <span className="sf-plan">early access</span>
+        </span>
       </button>
     </aside>
   );

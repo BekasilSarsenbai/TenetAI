@@ -4,26 +4,44 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ASKQA,
   DUR,
+  INSIGHTS,
   KP,
   type Meeting,
   type QA,
   TLDR,
   TODOS,
   TR,
+  type TranscriptSegment,
   fmt,
 } from "@/lib/data";
-import { Chevron, Mag, PauseIcon, PlayTri, SendIcon } from "./icons";
+import { Mag, PauseIcon, PlayTri, SendIcon } from "./icons";
 
-const NB = 64;
-const reduce = () => typeof window !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reduce = () =>
+  typeof window !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Deterministic waveform bar heights (seeded, matches the prototype curve).
-const BAR_HEIGHTS = Array.from({ length: NB }, (_, i) => {
-  const env = Math.sin((i / NB) * Math.PI);
-  return Math.round((0.24 + Math.abs(Math.sin(i * 12.9)) * 0.55 * (0.5 + 0.6 * env)) * 100);
-});
+type Tab = "transcript" | "insights" | "chat";
+type Thread = { q: string; a: string; cites?: QA["cites"] }[];
 
-type Thread = { q: string; a: string; cites: QA["cites"] }[];
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Russian plural for "реплика" (contributions).
+function plural(n: number): string {
+  const a = n % 10;
+  const b = n % 100;
+  if (a === 1 && b !== 11) return "реплика";
+  if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return "реплики";
+  return "реплик";
+}
+
+function speakerStats(tr: TranscriptSegment[]): string[] {
+  const counts = new Map<string, number>();
+  for (const l of tr) counts.set(l.speaker, (counts.get(l.speaker) ?? 0) + 1);
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, n]) => `<b>${escapeHtml(name)}</b> — ${n} ${plural(n)}`);
+}
 
 export function NoteView({
   show,
@@ -39,18 +57,17 @@ export function NoteView({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [openKp, setOpenKp] = useState<number | null>(null);
-  const [trOpen, setTrOpen] = useState(false);
   const [litSrc, setLitSrc] = useState<number | null>(null);
   const [cur, setCur] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [playerOn, setPlayerOn] = useState(false);
+  const [tab, setTab] = useState<Tab>("transcript");
   const [thread, setThread] = useState<Thread>([]);
   const [draft, setDraft] = useState("");
   const [audioDur, setAudioDur] = useState<number | null>(null);
   const fixingDur = useRef(false);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const transcriptRef = useRef<HTMLDivElement>(null);
+  const leftScrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const hasAudio = !!meeting.audioUrl;
@@ -63,6 +80,7 @@ export function NoteView({
   const failed = hasAudio && !hasTranscript && !hasSummary;
   // Demo seed meetings (m1–m5) have no audio — they show the showcase content.
   const isDemoNote = !hasAudio;
+  const pct = Math.min(100, (cur / DURATION) * 100);
 
   // Index of the transcript line currently being spoken (for live highlight).
   const activeLine = useMemo(() => {
@@ -75,15 +93,26 @@ export function NoteView({
     return idx;
   }, [realTr, cur]);
 
+  // Insights tab content — derived from real data, or the demo showcase.
+  const insThemes = hasSummary
+    ? summary!.keyPoints.map((k) => escapeHtml(k.text))
+    : isDemoNote
+    ? INSIGHTS.themes
+    : [];
+  const insSpeakers = hasTranscript
+    ? speakerStats(realTr!)
+    : isDemoNote
+    ? INSIGHTS.speakers
+    : [];
+
   // Reset the whole note when a different meeting is opened.
   useEffect(() => {
     setEditingTitle(false);
     setOpenKp(null);
-    setTrOpen(!!meeting.transcript?.length);
     setLitSrc(null);
     setCur(0);
     setPlaying(false);
-    setPlayerOn(!!meeting.audioUrl);
+    setTab("transcript");
     setThread([]);
     setDraft("");
     setAudioDur(null);
@@ -92,7 +121,8 @@ export function NoteView({
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    if (leftScrollRef.current) leftScrollRef.current.scrollTop = 0;
+    if (panelRef.current) panelRef.current.scrollTop = 0;
   }, [meeting.id, meeting.audioUrl, meeting.transcript]);
 
   // Synthetic playback clock — only for demo notes without real audio.
@@ -155,15 +185,18 @@ export function NoteView({
     };
   }, [hasAudio, meeting.id]);
 
-  // Scroll the highlighted demo transcript line into view when a source opens.
+  // When a source lights up, scroll the highlighted transcript line into view.
   useEffect(() => {
-    if (litSrc == null || !trOpen) return;
-    const line = transcriptRef.current?.querySelector<HTMLElement>(`.tl[data-src="${litSrc}"]`);
-    if (line) {
-      const id = setTimeout(() => line.scrollIntoView({ block: "center", behavior: reduce() ? "auto" : "smooth" }), 80);
+    if (tab !== "transcript") return;
+    const el = panelRef.current?.querySelector<HTMLElement>(".tr-block.lit");
+    if (el) {
+      const id = setTimeout(
+        () => el.scrollIntoView({ block: "center", behavior: reduce() ? "auto" : "smooth" }),
+        80
+      );
       return () => clearTimeout(id);
     }
-  }, [litSrc, trOpen]);
+  }, [tab, litSrc, activeLine]);
 
   function seekTo(sec: number) {
     const target = Math.min(DURATION, Math.max(0, sec));
@@ -183,16 +216,20 @@ export function NoteView({
     }
   }
 
+  function seekBar(e: React.MouseEvent<HTMLDivElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    seekTo(((e.clientX - r.left) / r.width) * DURATION);
+  }
+
   function gotoTime(sec: number) {
-    setPlayerOn(true);
     seekTo(sec);
     if (hasAudio) audioRef.current?.play().catch(() => {});
     else setPlaying(true);
   }
 
-  function gotoSource(sec: number, src: number) {
-    setTrOpen(true);
-    setLitSrc(src);
+  function gotoSource(sec: number, src?: number) {
+    setTab("transcript");
+    if (src != null) setLitSrc(src);
     gotoTime(sec);
   }
 
@@ -201,287 +238,343 @@ export function NoteView({
       setOpenKp(null);
     } else {
       setOpenKp(i);
-      if (src != null) gotoSource(sec, src);
-      else gotoTime(sec);
+      gotoSource(sec, src);
     }
+  }
+
+  function scrollPanelDown() {
+    setTimeout(() => {
+      panelRef.current?.scrollTo({
+        top: panelRef.current.scrollHeight,
+        behavior: reduce() ? "auto" : "smooth",
+      });
+    }, 60);
   }
 
   function answer(item: QA, qText: string) {
     setThread((t) => [...t, { q: qText, a: item.a, cites: item.cites }]);
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: reduce() ? "auto" : "smooth" });
-    }, 60);
+    setTab("chat");
+    scrollPanelDown();
   }
 
   function sendAsk() {
     const v = draft.trim();
     if (!v) return;
     setDraft("");
-    const lv = v.toLowerCase();
-    const match =
-      ASKQA.find((x) => lv.includes("price") && x.q.includes("pricing")) ||
-      ASKQA.find((x) => (lv.includes("block") || lv.includes("stuck")) && x.q.includes("block")) ||
-      ASKQA.find((x) => lv.includes("trust") && x.q.includes("trust"));
-    const item: QA = match ?? {
-      q: v,
-      a: "I can only answer from this meeting. Try asking about the empty state, examples, or what built trust.",
-      cites: null,
-    };
-    answer(item, v);
+    setTab("chat");
+    if (isDemoNote) {
+      const lv = v.toLowerCase();
+      const match = ASKQA.find((x) => {
+        const q = x.q.toLowerCase();
+        if ((lv.includes("цен") || lv.includes("price")) && q.includes("цен")) return true;
+        if ((lv.includes("меша") || lv.includes("блок") || lv.includes("проблем")) && q.includes("меша")) return true;
+        if (lv.includes("конкур") && q.includes("конкур")) return true;
+        return false;
+      });
+      const item: QA =
+        match ?? {
+          q: v,
+          a: "Я отвечаю только по этой встрече. Спросите про онбординг, контекст между синками или цену.",
+          cites: null,
+        };
+      answer(item, v);
+    } else {
+      setThread((t) => [
+        ...t,
+        {
+          q: v,
+          a: "Живой AI-чат скоро появится — ответы со ссылками на тайм-коды прямо из вашего транскрипта. Пока что откройте «Key points» или вкладку Transcript, чтобы перейти к нужному моменту.",
+        },
+      ]);
+      scrollPanelDown();
+    }
   }
 
-  const idx = Math.round((cur / DURATION) * NB);
+  // ---- key points (real summary or demo showcase) ----
+  const keyPoints: { text: string; ts: string; sec: number; who: string; quote: string; src?: number }[] =
+    hasSummary
+      ? summary!.keyPoints.map((k) => ({ text: k.text, ts: fmt(k.start), sec: k.start, who: k.speaker, quote: k.quote }))
+      : isDemoNote
+      ? KP.map((k, i) => ({ text: k.txt, ts: k.ts, sec: k.sec, who: k.who, quote: k.q, src: i }))
+      : [];
+  const nextSteps = hasSummary ? summary!.nextSteps : isDemoNote ? TODOS : [];
 
   return (
     <div className={`view viewNote${show ? " show" : ""}`}>
-      <div className="scroll" ref={scrollRef}>
-        <div className="col">
-          {editingTitle ? (
-            <input
-              className="doc-title-edit"
-              value={titleDraft}
-              autoFocus
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={() => { onRename?.(titleDraft); setEditingTitle(false); }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-                if (e.key === "Escape") setEditingTitle(false);
-              }}
-            />
-          ) : (
-            <div
-              className={`doc-title${onRename ? " editable" : ""}`}
-              onClick={() => { if (onRename) { setTitleDraft(meeting.title); setEditingTitle(true); } }}
-              title={onRename ? "Click to rename" : undefined}
-            >
-              {meeting.title}
-              {onRename && <span className="title-pen">✎</span>}
-            </div>
-          )}
-          <div className="doc-meta">
-            <span>{meeting.day}, {meeting.time}</span>
-            <span className="dot" />
-            <span>{meeting.dur}</span>
-            <span className="dot" />
-            <span>{meeting.who}</span>
-          </div>
+      <div className="vnote">
+        {/* ---------------- left: document ---------------- */}
+        <div className="note-left">
+          <div className="note-left-scroll" ref={leftScrollRef}>
+            <div className="nl-inner">
+              {/* media tile */}
+              {hasAudio ? (
+                <div className="vid audio">
+                  <span className="audio-tag"><span className="rd" /> Audio recording</span>
+                  <button className="vid-play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
+                    {playing ? <PauseIcon /> : <PlayTri />}
+                  </button>
+                  <div className="vid-bar">
+                    <span className="vid-time">{fmt(cur)}</span>
+                    <div className="vid-prog" onClick={seekBar}>
+                      <div className="vid-prog-fill" style={{ width: pct + "%" }} />
+                    </div>
+                    <span className="vid-time">{fmt(DURATION)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="vid">
+                  <div className="vid-grid">
+                    <div className="vid-tile" style={{ backgroundImage: "url(/call/person-1.jpg)" }}><span>P03 · Participant</span></div>
+                    <div className="vid-tile" style={{ backgroundImage: "url(/call/person-2.jpg)" }}><span>You</span></div>
+                  </div>
+                  <button className="vid-play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
+                    {playing ? <PauseIcon /> : <PlayTri />}
+                  </button>
+                  <div className="vid-bar">
+                    <span className="vid-time">{fmt(cur)}</span>
+                    <div className="vid-prog" onClick={seekBar}>
+                      <div className="vid-prog-fill" style={{ width: pct + "%" }} />
+                    </div>
+                    <span className="vid-time">{fmt(DURATION)}</span>
+                  </div>
+                </div>
+              )}
 
-          {failed ? (
-            <div className="fail-note">
-              <p className="lead" style={{ marginTop: 22 }}>
-                <span className="lbl">Audio</span>
-                <span>
-                  Your recording is saved, but we couldn&apos;t pull a transcript from it — the audio
-                  may have been silent, very short, or the mic didn&apos;t capture sound. Play it back
-                  below to check, or try again.
-                </span>
-              </p>
-              {onRetry && (
-                <button className="retry-btn" onClick={onRetry}>↻ Try transcribing again</button>
+              {/* title */}
+              {editingTitle ? (
+                <input
+                  className="nl-title-edit"
+                  value={titleDraft}
+                  autoFocus
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onBlur={() => { onRename?.(titleDraft); setEditingTitle(false); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    if (e.key === "Escape") setEditingTitle(false);
+                  }}
+                />
+              ) : (
+                <div
+                  className={`nl-title${onRename ? " editable" : ""}`}
+                  onClick={() => { if (onRename) { setTitleDraft(meeting.title); setEditingTitle(true); } }}
+                  title={onRename ? "Click to rename" : undefined}
+                >
+                  {meeting.title}
+                  {onRename && <span className="pen">✎</span>}
+                </div>
+              )}
+
+              <div className="nl-meta">
+                <span>{meeting.day}, {meeting.time}</span>
+                <span className="sep" />
+                <span>{meeting.dur}</span>
+                <span className="sep" />
+                <span>{meeting.who}</span>
+              </div>
+
+              <div className="nl-rule" />
+
+              {failed ? (
+                <div className="fail">
+                  <div className="sec-h" style={{ marginTop: 0 }}>Recording saved</div>
+                  <p>
+                    <span className="lbl">Audio</span>
+                    We couldn&apos;t pull a transcript from this recording — it may have been silent,
+                    very short, or the mic didn&apos;t capture sound. Play it back above to check, or try again.
+                  </p>
+                  {onRetry && <button className="retry-btn" onClick={onRetry}>↻ Try transcribing again</button>}
+                </div>
+              ) : (
+                <>
+                  <div className="sec-h" style={{ marginTop: 0 }}>Summary</div>
+                  {hasSummary ? (
+                    <p className="summary-p">{summary!.tldr}</p>
+                  ) : hasTranscript ? (
+                    <p className="summary-p">{transcriptNotice(meeting)}</p>
+                  ) : (
+                    <p className="summary-p" dangerouslySetInnerHTML={{ __html: TLDR }} />
+                  )}
+
+                  {keyPoints.length > 0 && (
+                    <>
+                      <div className="sec-h">Key points</div>
+                      <div>
+                        {keyPoints.map((k, i) => (
+                          <div className={`kp${openKp === i ? " open" : ""}`} key={i}>
+                            <button className="kp-row" onClick={() => toggleKp(i, k.sec, k.src)}>
+                              <span className="kp-dot" />
+                              <span className="kp-main">
+                                <span className="kp-txt">{k.text}</span>
+                                <span className="kp-ts"><span className="pp">▶</span>{k.ts} · {k.who}</span>
+                              </span>
+                              <span className="kp-mag" title="See source"><Mag /></span>
+                            </button>
+                            <div className="kp-src">
+                              <div className="kp-quote">&quot;{k.quote}&quot;</div>
+                              <div className="kp-jump">
+                                <span className="pp"><PlayTri /></span>
+                                Jump to {k.ts}<span className="who"> · {k.who}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {nextSteps.length > 0 && (
+                    <>
+                      <div className="sec-h">Next steps</div>
+                      {nextSteps.map((t, i) => (
+                        <div className="todo" key={i}><span className="cb" /> {t}</div>
+                      ))}
+                    </>
+                  )}
+                </>
               )}
             </div>
-          ) : (
-            <>
-              {/* TL;DR — real AI summary, transcript notice, or demo */}
-              <p className="lead">
-                <span className="lbl">{hasTranscript && !hasSummary ? "Transcript" : "TL;DR"}</span>
-                <span>{hasSummary ? summary!.tldr : hasTranscript ? transcriptNotice(meeting) : TLDR}</span>
-              </p>
+          </div>
+        </div>
 
-              {/* Key points */}
-              {hasSummary
-                ? summary!.keyPoints.length > 0 && (
-                    <>
-                      <div className="sec">Key points</div>
-                      <div>
-                        {summary!.keyPoints.map((k, i) => (
-                          <div className={`kpw${openKp === i ? " open" : ""}`} key={i}>
-                            <button className="kp" onClick={() => toggleKp(i, k.start)}>
-                              <span className="dot" />
-                              <span className="body">
-                                <span className="txt">{k.text}</span>
-                                <br />
-                                <span className="ts"><span className="pp">▶</span>{fmt(k.start)} · {k.speaker}</span>
-                              </span>
-                              <span className="src-ico" title="See source"><Mag /></span>
-                            </button>
-                            <div className="kp-src">
-                              <p className="q">&quot;{k.quote}&quot;</p>
-                              <div className="m">
-                                <span>▶ Jump to {fmt(k.start)}</span>
-                                <span className="who">· {k.speaker}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )
-                : isDemoNote && (
-                    <>
-                      <div className="sec">Key points</div>
-                      <div>
-                        {KP.map((k, i) => (
-                          <div className={`kpw${openKp === i ? " open" : ""}`} key={i}>
-                            <button className="kp" onClick={() => toggleKp(i, k.sec, i)}>
-                              <span className="dot" />
-                              <span className="body">
-                                <span className="txt">{k.txt}</span>
-                                <br />
-                                <span className="ts"><span className="pp">▶</span>{k.ts} · {k.who}</span>
-                              </span>
-                              <span className="src-ico" title="See source"><Mag /></span>
-                            </button>
-                            <div className="kp-src">
-                              <p className="q">&quot;{k.q}&quot;</p>
-                              <div className="m">
-                                <span>▶ Jump to {k.ts}</span>
-                                <span className="who">· {k.who}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
+        {/* ---------------- right: tabbed panel ---------------- */}
+        <div className="note-right">
+          <div className="tabs">
+            <button className={`tab${tab === "transcript" ? " on" : ""}`} onClick={() => setTab("transcript")}>Transcript</button>
+            <button className={`tab${tab === "insights" ? " on" : ""}`} onClick={() => setTab("insights")}>Insights</button>
+            <button className={`tab${tab === "chat" ? " on" : ""}`} onClick={() => setTab("chat")}>AI chat</button>
+          </div>
 
-              {/* Next steps */}
-              {hasSummary
-                ? summary!.nextSteps.length > 0 && (
-                    <>
-                      <div className="sec">Next steps</div>
-                      {summary!.nextSteps.map((t, i) => (
-                        <div className="todo" key={i}>
-                          <span className="cb" /> {t}
-                        </div>
-                      ))}
-                    </>
-                  )
-                : isDemoNote && (
-                    <>
-                      <div className="sec">Next steps</div>
-                      {TODOS.map((t, i) => (
-                        <div className="todo" key={i}>
-                          <span className="cb" /> {t}
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-              {/* Transcript */}
-              {hasTranscript ? (
-                <>
-                  <div className="sec" style={{ marginTop: 26 }}>Full transcript</div>
-                  <div className="transcript open transcript-real" ref={transcriptRef}>
-                    {realTr!.map((l, i) => (
-                      <button
-                        key={i}
-                        className={`tl tl-real${i === activeLine ? " lit" : ""}`}
-                        onClick={() => gotoTime(l.start)}
-                      >
-                        <span className="who">{l.speaker}</span>
-                        <span className="said">
-                          <span className="tl-ts">{fmt(l.start)}</span>
-                          {l.text}
-                        </span>
-                      </button>
-                    ))}
+          <div className="panel" ref={panelRef}>
+            {tab === "transcript" && (
+              hasTranscript ? (
+                realTr!.map((l, i) => (
+                  <button
+                    key={i}
+                    className={`tr-block clickable${i === activeLine ? " lit" : ""}`}
+                    onClick={() => gotoTime(l.start)}
+                  >
+                    <div className="tr-who">
+                      <span className="tr-av">{l.speaker[0]?.toUpperCase()}</span>
+                      <span className="tr-name">{l.speaker}</span>
+                      <span className="tr-ts">{fmt(l.start)}</span>
+                    </div>
+                    <div className="tr-said">{l.text}</div>
+                  </button>
+                ))
+              ) : isDemoNote ? (
+                TR.map((t, i) => (
+                  <div
+                    key={i}
+                    className={`tr-block${t.src != null && t.src === litSrc ? " lit" : ""}`}
+                    data-src={t.src ?? undefined}
+                  >
+                    <div className="tr-who">
+                      <span className="tr-av">{t.who[0]?.toUpperCase()}</span>
+                      <span className="tr-name">{t.who}</span>
+                    </div>
+                    <div className="tr-said" dangerouslySetInnerHTML={{ __html: t.said }} />
                   </div>
+                ))
+              ) : (
+                <div className="panel-empty">Transcript will appear here once your recording is transcribed.</div>
+              )
+            )}
+
+            {tab === "insights" && (
+              insThemes.length > 0 || insSpeakers.length > 0 ? (
+                <>
+                  {insThemes.length > 0 && (
+                    <div className="ins-block">
+                      <div className="ins-lbl">Themes</div>
+                      {insThemes.map((th, i) => (
+                        <div className="ins-item" key={i}>
+                          <span className="ins-dot" />
+                          <span className="ins-txt" dangerouslySetInnerHTML={{ __html: th }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {insSpeakers.length > 0 && (
+                    <div className="ins-block">
+                      <div className="ins-lbl">Speakers</div>
+                      {insSpeakers.map((sp, i) => (
+                        <div className="ins-item" key={i}>
+                          <span className="ins-dot" />
+                          <span className="ins-txt" dangerouslySetInnerHTML={{ __html: sp }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               ) : (
-                isDemoNote && (
-                  <>
-                    <button className={`tr-toggle${trOpen ? " open" : ""}`} onClick={() => setTrOpen((o) => !o)}>
-                      <Chevron />
-                      <span> {trOpen ? "Hide transcript" : "Show full transcript"}</span>
-                    </button>
-                    <div className={`transcript${trOpen ? " open" : ""}`} ref={transcriptRef}>
-                      {TR.map((t, i) => (
-                        <div
-                          key={i}
-                          className={`tl${t.src != null && t.src === litSrc ? " lit" : ""}`}
-                          data-src={t.src ?? undefined}
-                        >
-                          <span className="who">{t.who}</span>
-                          <span className="said" dangerouslySetInnerHTML={{ __html: t.said }} />
+                <div className="panel-empty">Insights appear once this meeting is transcribed and summarized.</div>
+              )
+            )}
+
+            {tab === "chat" && (
+              <>
+                {isDemoNote && thread.length === 0 && (
+                  <div className="sugg">
+                    {ASKQA.map((x, i) => (
+                      <button key={i} onClick={() => answer(x, x.q)}>{x.q}</button>
+                    ))}
+                  </div>
+                )}
+                {thread.map((item, i) => (
+                  <div className="chat-row" key={i}>
+                    <div className="chat-q"><div className="bub u">{item.q}</div></div>
+                    <div className="bub a">
+                      {item.a}
+                      {item.cites !== undefined && (
+                        <div className="cites">
+                          {item.cites ? (
+                            item.cites.map((c, j) => (
+                              <button className="cite" key={j} onClick={() => gotoSource(c.sec, c.src)}>
+                                ▶ {c.who} · {c.ts}
+                              </button>
+                            ))
+                          ) : (
+                            <span className="cite none">no source — not in this meeting</span>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </div>
-
-                    <div className="askwrap">
-                      <div className="sec">Ask — with receipts</div>
-                      <div className="sugg">
-                        {ASKQA.map((x, i) => (
-                          <button key={i} onClick={() => answer(x, x.q)}>{x.q}</button>
-                        ))}
-                      </div>
-                      <div>
-                        {thread.map((item, i) => (
-                          <div className="qa" key={i}>
-                            <div className="bub u">{item.q}</div>
-                            <div className="bub a">
-                              {item.a}
-                              <div className="cites">
-                                {item.cites ? (
-                                  item.cites.map((c, j) => (
-                                    <button className="cite" key={j} onClick={() => gotoSource(c.sec, c.src)}>
-                                      ▶ {c.who} · {c.ts}
-                                    </button>
-                                  ))
-                                ) : (
-                                  <span className="cite none">no source — not in this meeting</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {hasAudio && <audio ref={audioRef} src={meeting.audioUrl} preload="auto" />}
-
-      <div className="askbar-wrap">
-        <div className={`player${playerOn ? " show" : ""}`}>
-          <button className="play" onClick={togglePlay}>
-            {playing ? <PauseIcon /> : <PlayTri />}
-          </button>
-          <div
-            className="wave"
-            onClick={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              seekTo(((e.clientX - r.left) / r.width) * DURATION);
-            }}
-          >
-            {BAR_HEIGHTS.map((h, i) => (
-              <div
-                key={i}
-                className={`b${i <= idx ? " played" : ""}${i >= idx - 1 && i <= idx + 2 ? " act" : ""}`}
-                style={{ height: h + "%" }}
-              />
-            ))}
-            <div className="ph" style={{ left: (cur / DURATION) * 100 + "%" }} />
+                  </div>
+                ))}
+                {!isDemoNote && thread.length === 0 && (
+                  <div className="panel-empty">
+                    Ask anything about this meeting — grounded, timestamped answers are coming.
+                    For now, jump to any moment from Key points or the Transcript.
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          <span className="ptime"><b>{fmt(cur)}</b> / {fmt(DURATION)}</span>
-          <button className="pclose" onClick={() => { audioRef.current?.pause(); setPlaying(false); setPlayerOn(false); }}>×</button>
         </div>
-        <div className="askbar">
-          <input
-            placeholder={isDemoNote ? "Ask anything about this meeting…" : "Ask anything — AI answers land in the next step…"}
-            autoComplete="off"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") sendAsk(); }}
-            disabled={!isDemoNote}
-          />
-          <button className="send" onClick={sendAsk} disabled={!isDemoNote}><SendIcon /></button>
+
+        {/* ---------------- floating dock ---------------- */}
+        <div className="dock">
+          <div className="dock-inner">
+            <button className="dock-resume" onClick={togglePlay}>
+              {playing ? <PauseIcon /> : <PlayTri />}
+              {playing ? "Pause" : "Listen"}
+              <span className="t">{fmt(cur)}</span>
+            </button>
+            <div className="dock-ask">
+              <input
+                placeholder="Ask anything about this meeting…"
+                autoComplete="off"
+                value={draft}
+                onFocus={() => setTab("chat")}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") sendAsk(); }}
+              />
+              <button className="dock-send" onClick={sendAsk} disabled={!draft.trim()}><SendIcon /></button>
+            </div>
+          </div>
         </div>
+
+        {hasAudio && <audio ref={audioRef} src={meeting.audioUrl} preload="auto" />}
       </div>
     </div>
   );
