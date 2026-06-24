@@ -267,7 +267,7 @@ const en = {
   },
   finalCta: {
     h2: { a: "Stop watching your meetings ", em: "twice." },
-    sub: "Join the waitlist and be first to record, summarize and skip the replay.",
+    sub: "Start free — record, summarize and skip the replay.",
   },
   footer: {
     tagline: "AI notes for every call. Never rewatch a recording again.",
@@ -549,7 +549,7 @@ const ru: Dict = {
   },
   finalCta: {
     h2: { a: "Хватит смотреть встречи ", em: "дважды." },
-    sub: "Вступайте в лист ожидания — первыми записывайте, суммируйте и пропускайте повтор.",
+    sub: "Начните бесплатно — записывайте, суммируйте и пропускайте повтор.",
   },
   footer: {
     tagline: "AI-заметки для каждого звонка. Больше никогда не пересматривайте записи.",
