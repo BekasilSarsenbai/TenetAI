@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/lib/i18n";
 
 // One typeface across the whole landing — Manrope (Cyrillic included).
@@ -48,6 +49,7 @@ export default function RootLayout({
     >
       <body>
         <LocaleProvider>{children}</LocaleProvider>
+        <Analytics />
       </body>
     </html>
   );
