@@ -105,7 +105,7 @@ export default function LoginPage() {
           </>
         )}
 
-        <a href="https://tenet-ten.vercel.app" className="login-back">
+        <a href="https://tenet.blog" className="login-back">
           ← Back to site
         </a>
       </div>
