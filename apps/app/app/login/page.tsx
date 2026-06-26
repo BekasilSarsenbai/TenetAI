@@ -4,23 +4,73 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/Logo";
 
+type Mode = "signin" | "signup";
+
 export default function LoginPage() {
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function sendMagicLink(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    setError("");
+    const supabase = createClient();
+
+    if (mode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      });
+      if (error) {
+        setLoading(false);
+        setError(error.message);
+        return;
+      }
+      // Fire the welcome email (best-effort — never blocks the user).
+      fetch("/api/welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      }).catch(() => {});
+
+      if (data.session) {
+        // Auto-confirm on → signed in immediately.
+        window.location.assign("/");
+      } else {
+        // Email confirmation required → tell them to check their inbox.
+        setLoading(false);
+        setSent(true);
+      }
+      return;
+    }
+
+    // Sign in with an existing password.
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    setLoading(false);
+    if (error) setError(error.message);
+    else window.location.assign("/");
+  }
+
+  async function sendMagicLink() {
+    if (!email.trim()) {
+      setError("Enter your email first.");
+      return;
+    }
     setLoading(true);
     setError("");
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
+      options: { emailRedirectTo: `${location.origin}/auth/callback` },
     });
     setLoading(false);
     if (error) setError(error.message);
@@ -48,16 +98,20 @@ export default function LoginPage() {
             <div className="ic">✉️</div>
             <h3>Check your email</h3>
             <p>
-              We sent a magic link to <strong>{email}</strong>. Click it to sign
-              in — no password needed.
+              We sent a link to <strong>{email}</strong>. Click it to finish
+              signing in.
             </p>
           </div>
         ) : (
           <>
-            <h2>Sign in</h2>
-            <p className="sub">Enter your email — we&apos;ll send you a link.</p>
+            <h2>{mode === "signup" ? "Create your account" : "Sign in"}</h2>
+            <p className="sub">
+              {mode === "signup"
+                ? "Use your email and a password to get started."
+                : "Welcome back — enter your email and password."}
+            </p>
 
-            <form onSubmit={sendMagicLink}>
+            <form onSubmit={handleSubmit}>
               <div className="login-field">
                 <label>Email</label>
                 <input
@@ -65,7 +119,22 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   autoFocus
+                  required
+                />
+              </div>
+              <div className="login-field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={
+                    mode === "signup" ? "new-password" : "current-password"
+                  }
+                  minLength={6}
                   required
                 />
               </div>
@@ -75,9 +144,52 @@ export default function LoginPage() {
                 </p>
               )}
               <button className="login-submit" disabled={loading}>
-                {loading ? "Sending…" : "Send magic link"}
+                {loading
+                  ? "Please wait…"
+                  : mode === "signup"
+                    ? "Create account"
+                    : "Sign in"}
               </button>
             </form>
+
+            <p
+              style={{
+                fontSize: 13,
+                textAlign: "center",
+                marginTop: 12,
+                color: "var(--muted, #888)",
+              }}
+            >
+              {mode === "signup" ? (
+                <>
+                  Already have an account?{" "}
+                  <a
+                    role="button"
+                    onClick={() => {
+                      setMode("signin");
+                      setError("");
+                    }}
+                    style={{ cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Sign in
+                  </a>
+                </>
+              ) : (
+                <>
+                  New here?{" "}
+                  <a
+                    role="button"
+                    onClick={() => {
+                      setMode("signup");
+                      setError("");
+                    }}
+                    style={{ cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Create an account
+                  </a>
+                </>
+              )}
+            </p>
 
             <div className="login-div">or</div>
 
@@ -101,6 +213,24 @@ export default function LoginPage() {
                 />
               </svg>
               Continue with Google
+            </button>
+
+            <button
+              type="button"
+              onClick={sendMagicLink}
+              disabled={loading}
+              style={{
+                marginTop: 10,
+                background: "none",
+                border: "none",
+                color: "var(--muted, #888)",
+                fontSize: 13,
+                cursor: "pointer",
+                textDecoration: "underline",
+                width: "100%",
+              }}
+            >
+              Email me a magic link instead
             </button>
           </>
         )}
