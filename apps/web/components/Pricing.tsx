@@ -48,7 +48,6 @@ export function Pricing() {
               onClick={() => setAnnual(true)}
             >
               {p.annual}
-              <span className="bill-save">{p.save}</span>
             </button>
           </div>
         </div>
