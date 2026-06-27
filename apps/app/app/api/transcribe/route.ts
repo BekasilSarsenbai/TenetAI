@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { DEMO_TRANSCRIPT_TEXT, type TranscriptSegment } from "@/lib/data";
+import { CORS, getUserId } from "@/lib/route-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -7,7 +8,14 @@ export const maxDuration = 60;
 type DgUtterance = { start: number; transcript: string; speaker?: number };
 type WhisperSegment = { start: number; text: string };
 
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 export async function POST(request: Request) {
+  if (!(await getUserId(request)))
+    return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: CORS });
+
   const url = new URL(request.url);
   const dur = Math.max(1, Number(url.searchParams.get("dur")) || 30);
   const lang = (url.searchParams.get("lang") || "auto").toLowerCase();
@@ -19,20 +27,20 @@ export async function POST(request: Request) {
   if (process.env.DEEPGRAM_API_KEY && blob.size > 0) {
     try {
       const lines = await deepgram(blob, contentType, process.env.DEEPGRAM_API_KEY, lang);
-      if (lines) return NextResponse.json({ lines, source: "deepgram" });
+      if (lines) return NextResponse.json({ lines, source: "deepgram" }, { headers: CORS });
     } catch {}
   }
   if (process.env.GROQ_API_KEY && blob.size > 0) {
     try {
       const lines = await groqWhisper(blob, contentType, process.env.GROQ_API_KEY, lang);
-      if (lines) return NextResponse.json({ lines, source: "groq" });
+      if (lines) return NextResponse.json({ lines, source: "groq" }, { headers: CORS });
     } catch {}
   }
 
   // A provider key is configured, so a real attempt was made above. Don't fake
   // a transcript on failure — return an honest empty result the UI can surface.
   if (process.env.DEEPGRAM_API_KEY || process.env.GROQ_API_KEY) {
-    return NextResponse.json({ lines: [], source: "failed" });
+    return NextResponse.json({ lines: [], source: "failed" }, { headers: CORS });
   }
 
   // No provider configured at all — showcase demo so the feature stays visible.
@@ -41,7 +49,7 @@ export async function POST(request: Request) {
     speaker: s.speaker,
     text: s.text,
   }));
-  return NextResponse.json({ lines, source: "demo" });
+  return NextResponse.json({ lines, source: "demo" }, { headers: CORS });
 }
 
 // Deepgram — nova-2 with diarization (real speaker labels).

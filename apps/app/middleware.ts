@@ -40,7 +40,10 @@ export async function middleware(request: NextRequest) {
   const isPublic =
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/api/welcome");
+    pathname.startsWith("/api/welcome") ||
+    // Self-gated API routes (Bearer token or cookie) — also used by the extension.
+    pathname.startsWith("/api/transcribe") ||
+    pathname.startsWith("/api/summarize");
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));

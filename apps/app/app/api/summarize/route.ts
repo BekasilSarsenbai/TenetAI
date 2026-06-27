@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { fmt, type KeyMoment, type MeetingSummary, type TranscriptSegment } from "@/lib/data";
+import { CORS, getUserId } from "@/lib/route-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
 
 const SCHEMA = {
   type: "object",
@@ -27,11 +32,14 @@ const SCHEMA = {
 };
 
 export async function POST(request: Request) {
+  if (!(await getUserId(request)))
+    return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: CORS });
+
   const body = await request.json().catch(() => null);
   const transcript: TranscriptSegment[] = body?.transcript ?? [];
   const durSec: number = body?.durSec ?? 0;
 
-  if (!transcript.length) return NextResponse.json({ summary: null });
+  if (!transcript.length) return NextResponse.json({ summary: null }, { headers: CORS });
 
   // Try whichever LLM provider is configured, in priority order.
   // Groq first: it's fast and reliable on the free tier. Gemini/Mistral are
@@ -44,13 +52,13 @@ export async function POST(request: Request) {
         process.env.GROQ_SUMMARY_MODEL || "llama-3.3-70b-versatile",
         transcript
       );
-      if (s) return NextResponse.json({ summary: s, source: "groq" });
+      if (s) return NextResponse.json({ summary: s, source: "groq" }, { headers: CORS });
     } catch {}
   }
   if (process.env.GEMINI_API_KEY) {
     try {
       const s = await gemini(transcript, process.env.GEMINI_API_KEY);
-      if (s) return NextResponse.json({ summary: s, source: "gemini" });
+      if (s) return NextResponse.json({ summary: s, source: "gemini" }, { headers: CORS });
     } catch {}
   }
   if (process.env.MISTRAL_API_KEY) {
@@ -61,11 +69,11 @@ export async function POST(request: Request) {
         process.env.MISTRAL_MODEL || "mistral-small-latest",
         transcript
       );
-      if (s) return NextResponse.json({ summary: s, source: "mistral" });
+      if (s) return NextResponse.json({ summary: s, source: "mistral" }, { headers: CORS });
     } catch {}
   }
 
-  return NextResponse.json({ summary: extractive(transcript, durSec), source: "demo" });
+  return NextResponse.json({ summary: extractive(transcript, durSec), source: "demo" }, { headers: CORS });
 }
 
 function transcriptText(transcript: TranscriptSegment[]): string {
