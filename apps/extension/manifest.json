@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Tenet — record & summarize calls",
   "version": "0.1.0",
-  "description": "Record any call from your browser tab — no bot joins. Get an AI transcript and summary with every point linked to the exact second it was said.",
+  "description": "Record any call from your browser tab — no bot joins. Get an AI transcript and summary linked to the exact second.",
   "permissions": ["tabCapture", "offscreen", "sidePanel", "storage"],
   "host_permissions": [
     "https://app.tenet.blog/*",
