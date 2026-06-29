@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { GUIDE, fmt } from "@/lib/data";
+import { fmt } from "@/lib/data";
 import { Flag } from "./icons";
 import { useRecorder, type RecordResult } from "@/lib/useRecorder";
 
@@ -14,18 +14,15 @@ export function LiveView({
   onEnd: () => void;
   onFinish: (res: RecordResult) => void;
 }) {
-  const [qIdx, setQIdx] = useState(0);
   const [markers, setMarkers] = useState<string[]>([]);
   const [ending, setEnding] = useState(false);
-  const curQRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { status, seconds, start, stop, reset } = useRecorder(canvasRef);
 
-  // Start the mic when the live view appears; tear it down when it leaves
-  // (e.g. navigating Home discards the take without creating a note).
+  // Start the mic when the view appears; tear it down when it leaves
+  // (navigating away discards the take without creating a note).
   useEffect(() => {
     if (!show) return;
-    setQIdx(0);
     setMarkers([]);
     setEnding(false);
     start();
@@ -33,14 +30,6 @@ export function LiveView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show]);
 
-  // Keep the current question centered as it changes.
-  useEffect(() => {
-    if (!show) return;
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    curQRef.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
-  }, [qIdx, show]);
-
-  const setQ = (i: number) => setQIdx(Math.max(0, Math.min(GUIDE.length - 1, i)));
   const addMark = () => setMarkers((m) => [...m, "★ " + fmt(seconds)]);
 
   async function endSession() {
@@ -65,34 +54,40 @@ export function LiveView({
           {recLabel}
         </span>
         <span className="clock">{mm}:{ss}</span>
-        {denied ? (
-          <span className="mic-warn">Mic access blocked — the guide still works</span>
-        ) : (
-          <canvas className="live-wave" ref={canvasRef} />
-        )}
-        <button className="end" onClick={endSession} disabled={ending}>
-          {ending ? "Saving…" : "End session"}
+        {denied ? <span className="live-spacer" /> : <canvas className="live-wave" ref={canvasRef} />}
+        <button className="discard" onClick={onEnd} disabled={ending}>
+          Discard
         </button>
       </div>
-      <div className="prompter">
-        {GUIDE.map((q, i) => (
-          <div
-            key={i}
-            ref={i === qIdx ? curQRef : undefined}
-            className={`pq${i === qIdx ? " cur" : ""}${i < qIdx ? " done" : ""}`}
-            onClick={() => setQ(i)}
-          >
-            <span className="qn">Q{i + 1}</span>
-            <span>{q}</span>
+
+      <div className="live-stage">
+        <div className={`live-orb${denied ? " muted" : ""}`}>
+          <span className="core" />
+        </div>
+        <div className="live-time">{mm}:{ss}</div>
+        {denied ? (
+          <div className="live-status warn">
+            Microphone access is blocked. Allow it from the 🔒 icon in the address
+            bar to record — or go back and upload a file instead.
           </div>
-        ))}
+        ) : (
+          <div className="live-status">
+            Tenet is listening. Speak naturally — your transcript and summary are
+            ready the moment you stop.
+          </div>
+        )}
       </div>
+
       <div className="live-foot">
-        <button className="mark" onClick={addMark}><Flag /> Mark moment</button>
-        <button className="nextq" onClick={() => setQ(qIdx + 1)}>Next question →</button>
+        <button className="end-cta" onClick={endSession} disabled={ending || denied}>
+          {ending ? "Saving…" : "■ Stop & summarize"}
+        </button>
+        <button className="mark" onClick={addMark} disabled={denied}>
+          <Flag /> Mark moment
+        </button>
         <div className="markers">
           {markers.length === 0 ? (
-            <span className="empty">No marks yet — tap &quot;Mark moment&quot; when something matters.</span>
+            <span className="empty">Optional — mark a moment when something matters.</span>
           ) : (
             markers.map((m, i) => (
               <span className="marker" key={i}>{m}</span>
