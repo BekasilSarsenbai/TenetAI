@@ -103,6 +103,7 @@
     $("toggle").textContent = v ? "▴" : "▾";
   };
   $("toggle").onclick = () => setOpen(!open);
+  setOpen(true); // start expanded so the live transcript is visible from the get-go
   $("mark").onclick = () => chrome.runtime.sendMessage({ type: "BAR_MARK" });
   $("stop").onclick = () => {
     $("stop").textContent = "Processing…";
