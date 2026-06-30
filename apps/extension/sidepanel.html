@@ -11,9 +11,7 @@
       <svg width="20" height="20" viewBox="0 0 100 100" aria-hidden="true">
         <defs>
           <linearGradient id="lg" x1="50" y1="2" x2="50" y2="98" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#ffffff" />
-            <stop offset=".5" stop-color="#dadada" />
-            <stop offset="1" stop-color="#9a9a9a" />
+            <stop offset="0" stop-color="#ffffff" /><stop offset=".5" stop-color="#dadada" /><stop offset="1" stop-color="#9a9a9a" />
           </linearGradient>
         </defs>
         <path id="logoPath" fill="url(#lg)" />
@@ -28,70 +26,21 @@
       <section class="view" id="v-login">
         <h2 id="login-title">Sign in</h2>
         <p class="sub" id="login-sub">Record your calls and get the summary in seconds.</p>
-        <div class="field">
-          <label>Email</label>
-          <input id="email" type="email" placeholder="you@example.com" autocomplete="email" />
-        </div>
-        <div class="field">
-          <label>Password</label>
-          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
-        </div>
+        <div class="field"><label>Email</label><input id="email" type="email" placeholder="you@example.com" autocomplete="email" /></div>
+        <div class="field"><label>Password</label><input id="password" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
         <div class="err" id="login-err"></div>
         <button class="btn btn-primary" id="login-btn">Sign in</button>
         <div class="link" id="toggle-mode">New here? <u>Create an account</u></div>
       </section>
 
-      <!-- HOME -->
+      <!-- HOME / launcher -->
       <section class="view" id="v-home">
         <div class="rec-hero">
           <div class="rec-ring"><div class="rec-dot"></div></div>
           <h2>Record this tab</h2>
-          <p class="sub" style="margin-bottom: 20px">No bot joins the call — Tenet records the tab audio directly.</p>
-          <button class="btn btn-rec" id="start-btn">● Start recording</button>
-          <p class="hint">Open your meeting tab (Meet, Zoom, anything that plays audio), then hit record.</p>
-        </div>
-      </section>
-
-      <!-- RECORDING -->
-      <section class="view recording" id="v-recording">
-        <div class="rec-hero">
-          <div class="rec-ring"><div class="rec-dot"></div></div>
-          <div class="timer" id="timer">00:00</div>
-          <div class="tab-name" id="tab-name"></div>
-          <button class="btn btn-primary" id="stop-btn">■ Stop & summarize</button>
-        </div>
-      </section>
-
-      <!-- PROCESSING -->
-      <section class="view" id="v-processing">
-        <div class="proc">
-          <div class="spinner"></div>
-          <div id="proc-status" style="color: var(--soft)">Transcribing…</div>
-        </div>
-      </section>
-
-      <!-- RESULT -->
-      <section class="view" id="v-result">
-        <div class="card">
-          <div class="ttl">Summary</div>
-          <div class="tldr" id="tldr"></div>
-        </div>
-        <div class="card" id="kp-card">
-          <div class="ttl">Key points</div>
-          <div id="keypoints"></div>
-        </div>
-        <div class="card" id="steps-card">
-          <div class="ttl">Next steps</div>
-          <div id="nextsteps"></div>
-        </div>
-        <details>
-          <summary>Full transcript</summary>
-          <div class="card" style="margin-top: 8px"><div id="transcript"></div></div>
-        </details>
-        <div class="err" id="save-msg"></div>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="save-btn">Save to Tenet</button>
-          <button class="btn btn-ghost" id="new-btn">New</button>
+          <p class="sub" style="margin-bottom: 20px">No bot joins the call — Tenet records the tab audio directly. A floating bar appears on the page.</p>
+          <button class="btn btn-rec" id="start-btn">● Record this tab</button>
+          <p class="hint" id="home-hint">Open your meeting tab (Meet, Zoom, anything that plays audio), then hit record. Controls show up right on the page.</p>
         </div>
       </section>
     </main>
