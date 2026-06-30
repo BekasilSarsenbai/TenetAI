@@ -46,6 +46,7 @@
     .tx .t{font-family:"JetBrains Mono",monospace;font-size:11px;color:#E9B84A;background:rgba(233,184,74,.1);
       border:1px solid rgba(233,184,74,.4);border-radius:5px;padding:1px 6px;height:fit-content;white-space:nowrap}
     .tx s{color:#B8B8BE;text-decoration:none;line-height:1.45}
+    #livetx{max-height:220px;overflow:auto}
     .tldr{color:#F3F3F4;font-size:13.5px;line-height:1.55;margin-bottom:6px}
     .muted{color:#7A7A82;font-size:12.5px;line-height:1.5}
     .live{display:inline-flex;align-items:center;gap:6px;color:#7A7A82;font-size:11px;margin-top:6px}
@@ -68,9 +69,9 @@
     </div>
     <div class="panel" id="panel">
       <div id="recview">
-        <div class="ptitle" id="ptitle">Recording</div>
-        <div class="muted" id="status">Tenet is capturing this tab. Mark anything important — your transcript &amp; summary are ready when you stop.</div>
-        <div class="live" id="liverow"><span class="dot" style="width:5px;height:5px"></span> recording…</div>
+        <div class="ptitle">Live transcript</div>
+        <div id="livetx"><div class="muted" id="emptytx">Listening… text appears here as people speak.</div></div>
+        <div class="live"><span class="dot" style="width:5px;height:5px"></span> <span id="status">listening…</span></div>
         <div class="foot">
           <button class="stop" id="stop">■ Stop &amp; summarize</button>
         </div>
@@ -144,8 +145,20 @@
     });
   }
 
+  function appendLive(line) {
+    const empty = $("emptytx"); if (empty) empty.remove();
+    const tx = $("livetx");
+    if (!tx) return;
+    const d = document.createElement("div"); d.className = "tx";
+    const t = document.createElement("span"); t.className = "t"; t.textContent = fmt(line.start);
+    const s = document.createElement("s"); s.textContent = line.text || "";
+    d.append(t, s); tx.appendChild(d);
+    tx.scrollTop = tx.scrollHeight;
+  }
+
   chrome.runtime.onMessage.addListener((m) => {
     if (m.target !== "bar") return;
+    if (m.type === "PARTIAL") appendLive(m.line);
     if (m.type === "STATUS") { $("status").textContent = m.text; }
     if (m.type === "RESULT") showResult(m.transcript, m.summary);
     if (m.type === "SAVED") { $("savemsg").textContent = m.ok ? "Saved ✓ — open it at app.tenet.blog" : ("Couldn't save: " + (m.error || "")); }
