@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useDict } from "@/lib/i18n";
-import { SIGN_IN_URL } from "@/lib/app-url";
+import { SIGN_IN_URL, CHROME_STORE_URL } from "@/lib/app-url";
 import { LangToggle } from "./LangToggle";
 import { Logo } from "./Logo";
 
@@ -32,7 +32,7 @@ export function Nav() {
           <div className="nav-cta">
             <LangToggle />
             <a className="btn btn-ghost nav-signin" href={SIGN_IN_URL}>{t.cta.signIn}</a>
-            <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
+            <a className="btn btn-primary" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">{t.cta.addToChrome}</a>
             <button
               id="navToggle"
               className="navtoggle"
@@ -58,7 +58,7 @@ export function Nav() {
         </a>
         <div className="mm-cta">
           <LangToggle />
-          <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
+          <a className="btn btn-primary" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">{t.cta.addToChrome}</a>
         </div>
       </div>
     </>
