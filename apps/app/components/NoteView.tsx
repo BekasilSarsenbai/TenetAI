@@ -19,6 +19,12 @@ import { Mag, PauseIcon, PlayTri, SendIcon } from "./icons";
 const reduce = () =>
   typeof window !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// Static waveform shape for the audio player (bars fill amber as playback advances).
+const WAVE = [
+  34, 52, 40, 66, 48, 72, 58, 80, 62, 90, 70, 84, 60, 74, 50, 64, 44, 58, 68, 88, 76, 92,
+  70, 80, 58, 66, 48, 60, 42, 54, 64, 78, 86, 72, 60, 50, 44, 56, 66, 52, 72, 46, 62, 50,
+];
+
 type Tab = "transcript" | "insights" | "chat";
 type Thread = { q: string; a: string; cites?: QA["cites"] }[];
 
@@ -306,39 +312,28 @@ export function NoteView({
         <div className="note-left">
           <div className="note-left-scroll" ref={leftScrollRef}>
             <div className="nl-inner">
-              {/* media tile */}
-              {hasAudio ? (
-                <div className="vid audio">
-                  <span className="audio-tag"><span className="rd" /> Audio recording</span>
-                  <button className="vid-play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
+              {/* media tile — audio player (Tenet records audio only, no video) */}
+              <div className="aud">
+                <div className="aud-top">
+                  <span className="rd" />
+                  <span className="aud-lbl">Аудио запись</span>
+                  <span className="aud-meta">
+                    {hasAudio ? `${meeting.audioMime?.split("/")[1] || "audio"} · ${fmt(DURATION)}` : fmt(DURATION)}
+                  </span>
+                </div>
+                <div className="aud-row">
+                  <button className="aud-play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
                     {playing ? <PauseIcon /> : <PlayTri />}
                   </button>
-                  <div className="vid-bar">
-                    <span className="vid-time">{fmt(cur)}</span>
-                    <div className="vid-prog" onClick={seekBar}>
-                      <div className="vid-prog-fill" style={{ width: pct + "%" }} />
-                    </div>
-                    <span className="vid-time">{fmt(DURATION)}</span>
+                  <div className="aud-wave" onClick={seekBar} role="slider"
+                    aria-label="Перемотка записи" aria-valuemin={0} aria-valuemax={Math.round(DURATION)} aria-valuenow={Math.round(cur)}>
+                    {WAVE.map((h, i) => (
+                      <i key={i} className={((i + 0.5) / WAVE.length) * 100 <= pct ? "on" : undefined} style={{ height: h + "%" }} />
+                    ))}
                   </div>
+                  <span className="aud-t">{fmt(cur)}</span>
                 </div>
-              ) : (
-                <div className="vid">
-                  <div className="vid-grid">
-                    <div className="vid-tile" style={{ backgroundImage: "url(/call/person-1.jpg)" }}><span>P03 · Participant</span></div>
-                    <div className="vid-tile" style={{ backgroundImage: "url(/call/person-2.jpg)" }}><span>You</span></div>
-                  </div>
-                  <button className="vid-play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
-                    {playing ? <PauseIcon /> : <PlayTri />}
-                  </button>
-                  <div className="vid-bar">
-                    <span className="vid-time">{fmt(cur)}</span>
-                    <div className="vid-prog" onClick={seekBar}>
-                      <div className="vid-prog-fill" style={{ width: pct + "%" }} />
-                    </div>
-                    <span className="vid-time">{fmt(DURATION)}</span>
-                  </div>
-                </div>
-              )}
+              </div>
 
               {/* title */}
               {editingTitle ? (
