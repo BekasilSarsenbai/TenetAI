@@ -110,22 +110,21 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 .note-left-scroll{flex:1;overflow:auto}
 .nl-inner{max-width:600px;margin:0 auto;padding:30px 36px 120px;width:100%}
 
-/* media tile (video grid for demo notes, audio frame for real recordings) */
-.vid{position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:16/10;margin-bottom:26px;border:1px solid var(--line)}
-.vid-grid{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.vid-tile{position:relative;background-size:cover;background-position:center;background-color:#15151a;display:flex;align-items:flex-start;padding:10px}
-.vid-tile::after{content:'';position:absolute;left:0;right:0;top:0;height:44px;background:linear-gradient(rgba(0,0,0,.5),transparent)}
-.vid-tile span{position:relative;z-index:1;font-size:10.5px;color:#fff;font-family:var(--mono);background:rgba(0,0,0,.45);padding:3px 8px;border-radius:6px;font-weight:500}
-.vid.audio{aspect-ratio:16/6;background:radial-gradient(130% 150% at 50% 0,#1b1b22,#0a0a0c)}
-.vid.audio .audio-tag{position:absolute;top:13px;left:15px;display:inline-flex;align-items:center;gap:8px;font-size:11.5px;color:var(--soft);font-family:var(--mono)}
-.vid.audio .audio-tag .rd{width:7px;height:7px;border-radius:50%;background:var(--amber)}
-.vid-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);color:#111;border:0;display:grid;place-items:center;box-shadow:0 8px 30px rgba(0,0,0,.5);transition:transform .15s}
-.vid-play:active{transform:translate(-50%,-50%) scale(.94)}
-.vid-play svg{width:16px;height:16px;margin-left:2px}
-.vid-bar{position:absolute;left:0;right:0;bottom:0;padding:11px 13px;background:linear-gradient(transparent,rgba(0,0,0,.7));display:flex;align-items:center;gap:10px}
-.vid-time{font-family:var(--mono);font-size:11px;color:#fff;flex:none}
-.vid-prog{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.22);position:relative;cursor:pointer}
-.vid-prog-fill{position:absolute;left:0;top:0;bottom:0;background:var(--amber);border-radius:2px}
+/* media tile — audio player (Tenet records audio only, no video) */
+.aud{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 17px;margin-bottom:26px}
+.aud-top{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.aud-top .rd{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none}
+.aud-lbl{font-size:11.5px;color:var(--soft);font-family:var(--mono)}
+.aud-meta{margin-left:auto;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.aud-row{display:flex;align-items:center;gap:15px}
+.aud-play{width:46px;height:46px;border-radius:50%;background:var(--amber);color:#111;border:0;flex:none;display:grid;place-items:center;cursor:pointer;transition:transform .15s;box-shadow:0 6px 20px -6px rgba(233,184,74,.5)}
+.aud-play:hover{transform:scale(1.05)}
+.aud-play:active{transform:scale(.95)}
+.aud-play svg{width:17px;height:17px;margin-left:2px}
+.aud-wave{flex:1;display:flex;align-items:center;gap:2.5px;height:38px;cursor:pointer}
+.aud-wave i{flex:1;border-radius:2px;background:var(--line-2);min-height:3px}
+.aud-wave i.on{background:var(--amber)}
+.aud-t{font-family:var(--mono);font-size:12px;color:var(--soft);flex:none;min-width:34px;text-align:right}
 
 /* document content */
 .nl-title{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin-bottom:11px}
