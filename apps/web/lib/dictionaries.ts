@@ -21,7 +21,6 @@ const en = {
   cta: {
     getStarted: "Get started free",
     signIn: "Sign in",
-    addToChrome: "Add to Chrome",
   },
   pricing: {
     h2: { a: "Simple, honest ", em: "pricing", b: "." },
@@ -307,7 +306,6 @@ const ru: Dict = {
   cta: {
     getStarted: "Начать бесплатно",
     signIn: "Войти",
-    addToChrome: "Установить в Chrome",
   },
   pricing: {
     h2: { a: "Простой и честный ", em: "прайсинг", b: "." },

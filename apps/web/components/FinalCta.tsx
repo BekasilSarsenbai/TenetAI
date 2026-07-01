@@ -1,7 +1,7 @@
 "use client";
 
 import { useDict } from "@/lib/i18n";
-import { CHROME_STORE_URL } from "@/lib/app-url";
+import { SIGN_IN_URL } from "@/lib/app-url";
 
 export function FinalCta() {
   const t = useDict();
@@ -19,7 +19,7 @@ export function FinalCta() {
           {t.finalCta.sub}
         </p>
         <div className="hero-cta" style={{ justifyContent: "center" }}>
-          <a className="btn btn-primary" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">{t.cta.addToChrome}</a>
+          <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
         </div>
       </div>
     </section>

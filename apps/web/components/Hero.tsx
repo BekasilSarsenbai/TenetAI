@@ -1,7 +1,7 @@
 "use client";
 
 import { useDict } from "@/lib/i18n";
-import { SIGN_IN_URL, CHROME_STORE_URL } from "@/lib/app-url";
+import { SIGN_IN_URL } from "@/lib/app-url";
 import { AppMock } from "./AppMock";
 
 export function Hero() {
@@ -20,8 +20,8 @@ export function Hero() {
         <p className="sub">{t.hero.sub}</p>
 
         <div className="hero-cta">
-          <a className="btn btn-primary" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">{t.cta.addToChrome}</a>
-          <a className="btn btn-soft" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
+          <a className="btn btn-primary" href={SIGN_IN_URL}>{t.cta.getStarted}</a>
+          <a className="btn btn-soft" href={SIGN_IN_URL}>{t.cta.signIn}</a>
         </div>
       </div>
 
