@@ -14,6 +14,7 @@ import {
   updateMeetingContent,
 } from "@/lib/meetings";
 import { Sidebar } from "./Sidebar";
+import { InstallBanner } from "./InstallBanner";
 import { HomeView } from "./HomeView";
 import { NoteView } from "./NoteView";
 import { LiveView } from "./LiveView";
@@ -395,6 +396,8 @@ export function TenetApp({ user }: { user: AppUser }) {
             )}
           </div>
         </div>
+
+        {view === "home" && <InstallBanner />}
 
         <div className="stage">
           <HomeView show={view === "home"} meetings={meetings} onAct={doAct} onOpen={openNote} name={user.name} />

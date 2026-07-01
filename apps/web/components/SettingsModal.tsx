@@ -131,7 +131,16 @@ export function SettingsModal({
                     <b>Chrome extension</b>
                     <span>Captures Google Meet audio without a bot</span>
                   </div>
-                  <button className="badge off" onClick={() => onToast("Opening Chrome Web Store…")}>
+                  <button
+                    className="badge off"
+                    onClick={() =>
+                      window.open(
+                        "https://chromewebstore.google.com/detail/tenet-%E2%80%94-record-summarize/klopcnnfoiceihmohdlphcflnfifdclp",
+                        "_blank",
+                        "noopener"
+                      )
+                    }
+                  >
                     Install
                   </button>
                 </div>
