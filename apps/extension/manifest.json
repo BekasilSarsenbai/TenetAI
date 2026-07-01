@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tenet — record & summarize calls",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Record any call from your browser tab — no bot joins. Get an AI transcript and summary linked to the exact second.",
   "permissions": [
     "tabCapture",
@@ -12,9 +12,7 @@
   ],
   "host_permissions": [
     "https://app.tenet.blog/*",
-    "https://texgkhxosinhasstxpxk.supabase.co/*",
-    "https://*/*",
-    "http://*/*"
+    "https://texgkhxosinhasstxpxk.supabase.co/*"
   ],
   "background": {
     "service_worker": "background.js",
