@@ -124,7 +124,7 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 .aud-wave{flex:1;display:flex;align-items:center;gap:2.5px;height:38px;cursor:pointer}
 .aud-wave i{flex:1;border-radius:2px;background:var(--line-2);min-height:3px}
 .aud-wave i.on{background:var(--amber)}
-.aud-t{font-family:var(--mono);font-size:12px;color:var(--soft);flex:none;min-width:34px;text-align:right}
+.aud-t{font-family:var(--mono);font-size:12px;color:var(--soft);flex:none;min-width:62px;text-align:right}
 
 /* document content */
 .nl-title{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin-bottom:11px}
@@ -184,6 +184,7 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 
 /* transcript */
 .tr-block{display:block;width:100%;text-align:left;background:none;border:0;margin-bottom:18px;padding:8px 10px;border-radius:12px;transition:background .2s}
+.tr-block.cont{margin-top:-10px}
 .tr-block.clickable{cursor:pointer}
 .tr-block.clickable:hover{background:rgba(255,255,255,.035)}
 .tr-who{display:flex;align-items:center;gap:9px;margin-bottom:8px}

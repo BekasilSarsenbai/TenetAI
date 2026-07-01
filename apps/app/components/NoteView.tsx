@@ -317,9 +317,6 @@ export function NoteView({
                 <div className="aud-top">
                   <span className="rd" />
                   <span className="aud-lbl">Аудио запись</span>
-                  <span className="aud-meta">
-                    {hasAudio ? `${meeting.audioMime?.split("/")[1] || "audio"} · ${fmt(DURATION)}` : fmt(DURATION)}
-                  </span>
                 </div>
                 <div className="aud-row">
                   <button className="aud-play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
@@ -331,7 +328,7 @@ export function NoteView({
                       <i key={i} className={((i + 0.5) / WAVE.length) * 100 <= pct ? "on" : undefined} style={{ height: h + "%" }} />
                     ))}
                   </div>
-                  <span className="aud-t">{fmt(cur)}</span>
+                  <span className="aud-t">{fmt(cur)} / {fmt(DURATION)}</span>
                 </div>
               </div>
 
@@ -442,20 +439,30 @@ export function NoteView({
           <div className="panel" ref={panelRef}>
             {tab === "transcript" && (
               hasTranscript ? (
-                realTr!.map((l, i) => (
-                  <button
-                    key={i}
-                    className={`tr-block clickable${i === activeLine ? " lit" : ""}`}
-                    onClick={() => gotoTime(l.start)}
-                  >
-                    <div className="tr-who">
-                      <span className="tr-av">{l.speaker[0]?.toUpperCase()}</span>
-                      <span className="tr-name">{l.speaker}</span>
-                      <span className="tr-ts">{fmt(l.start)}</span>
-                    </div>
-                    <div className="tr-said">{l.text}</div>
-                  </button>
-                ))
+                realTr!.map((l, i) => {
+                  // Group consecutive lines from the same speaker: only the first
+                  // of a run shows the avatar + name + timestamp header.
+                  const showWho = i === 0 || realTr![i - 1].speaker !== l.speaker;
+                  // Highlight the spoken line only once playback has actually moved
+                  // (avoids line 0 looking "selected" at cur=0 on load).
+                  const lit = i === activeLine && cur > 0;
+                  return (
+                    <button
+                      key={i}
+                      className={`tr-block clickable${lit ? " lit" : ""}${showWho ? "" : " cont"}`}
+                      onClick={() => gotoTime(l.start)}
+                    >
+                      {showWho && (
+                        <div className="tr-who">
+                          <span className="tr-av">{l.speaker[0]?.toUpperCase()}</span>
+                          <span className="tr-name">{l.speaker}</span>
+                          <span className="tr-ts">{fmt(l.start)}</span>
+                        </div>
+                      )}
+                      <div className="tr-said">{l.text}</div>
+                    </button>
+                  );
+                })
               ) : isDemoNote ? (
                 TR.map((t, i) => (
                   <div
