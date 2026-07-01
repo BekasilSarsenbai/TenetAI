@@ -38,6 +38,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const transcript: TranscriptSegment[] = body?.transcript ?? [];
   const durSec: number = body?.durSec ?? 0;
+  const instructions = instructionsFor(body?.template, body?.customPrompt);
 
   if (!transcript.length) return NextResponse.json({ summary: null }, { headers: CORS });
 
@@ -50,14 +51,15 @@ export async function POST(request: Request) {
         "https://api.groq.com/openai/v1",
         process.env.GROQ_API_KEY,
         process.env.GROQ_SUMMARY_MODEL || "llama-3.3-70b-versatile",
-        transcript
+        transcript,
+        instructions
       );
       if (s) return NextResponse.json({ summary: s, source: "groq" }, { headers: CORS });
     } catch {}
   }
   if (process.env.GEMINI_API_KEY) {
     try {
-      const s = await gemini(transcript, process.env.GEMINI_API_KEY);
+      const s = await gemini(transcript, process.env.GEMINI_API_KEY, instructions);
       if (s) return NextResponse.json({ summary: s, source: "gemini" }, { headers: CORS });
     } catch {}
   }
@@ -67,7 +69,8 @@ export async function POST(request: Request) {
         "https://api.mistral.ai/v1",
         process.env.MISTRAL_API_KEY,
         process.env.MISTRAL_MODEL || "mistral-small-latest",
-        transcript
+        transcript,
+        instructions
       );
       if (s) return NextResponse.json({ summary: s, source: "mistral" }, { headers: CORS });
     } catch {}
@@ -86,13 +89,30 @@ Use ONLY information present in the transcript — never invent facts.
 - keyPoints: the 3-5 most important moments. For each: text (a short paraphrase), start (the integer second taken from the matching line's timestamp), quote (the exact line text), speaker.
 - nextSteps: 2-4 concrete action items implied by the conversation.`;
 
+// Per-call-type focus, chosen in the extension popup ("Тип звонка").
+const TEMPLATE_HINTS: Record<string, string> = {
+  "1on1": "This is a 1:1 / sync — focus on decisions, agreements and blockers raised.",
+  sales: "This is a sales call — surface the prospect's objections, pricing/timeline agreements and next steps.",
+  interview: "This is an interview / user research — surface insights, pain points and verbatim user quotes.",
+  lecture: "This is a lecture — surface the key theses, definitions and terms.",
+};
+function instructionsFor(template?: string, customPrompt?: string): string {
+  const t = (template || "auto").toLowerCase();
+  if (t === "custom" && customPrompt?.trim()) {
+    return `${INSTRUCTIONS}\n\nExtra focus requested by the user: ${customPrompt.trim()}`;
+  }
+  const hint = TEMPLATE_HINTS[t];
+  return hint ? `${INSTRUCTIONS}\n\nContext: ${hint}` : INSTRUCTIONS;
+}
+
 // Google Gemini (structured output via responseSchema).
 async function gemini(
   transcript: TranscriptSegment[],
-  key: string
+  key: string,
+  instructions: string
 ): Promise<MeetingSummary | null> {
   const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-  const prompt = `${INSTRUCTIONS}\n\nTranscript:\n${transcriptText(transcript)}`;
+  const prompt = `${instructions}\n\nTranscript:\n${transcriptText(transcript)}`;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
   const res = await fetch(url, {
     method: "POST",
@@ -118,9 +138,10 @@ async function openaiChat(
   baseUrl: string,
   key: string,
   model: string,
-  transcript: TranscriptSegment[]
+  transcript: TranscriptSegment[],
+  instructions: string
 ): Promise<MeetingSummary | null> {
-  const prompt = `${INSTRUCTIONS}
+  const prompt = `${instructions}
 
 Respond with a JSON object of this exact shape:
 {"tldr": string, "keyPoints": [{"text": string, "start": number, "quote": string, "speaker": string}], "nextSteps": [string]}

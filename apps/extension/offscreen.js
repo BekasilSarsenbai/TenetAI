@@ -1,13 +1,19 @@
-// Records tab audio and transcribes it LIVE in ~12s segments (each a complete,
+// Records audio and transcribes it LIVE in ~12s segments (each a complete,
 // independently-decodable webm), streaming partial lines to the on-page bar. A
-// second continuous recorder keeps one clean audio file for saving. On stop it
+// second continuous recorder keeps one clean file for saving. On stop it
 // summarizes the accumulated transcript.
+//
+// Sources are mixed through a single AudioContext destination:
+//   • tab audio (chrome.tabCapture)  — the other participants
+//   • your microphone (optional)     — your own voice (tab capture never has it)
 import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET } from "./config.js";
 
 const CHUNK_MS = 12000;
 
-let stream = null;
 let audioCtx = null;
+let tabStream = null;
+let micStream = null;
+let recStream = null; // mixed stream both recorders read from
 let recA = null; // continuous → save file
 let partsA = [];
 let recB = null; // segmented → live transcript
@@ -19,10 +25,11 @@ let durSec = 0;
 let live = []; // accumulated transcript lines
 let lastBlob = null;
 let lastResult = null;
+let opts = {}; // { lang, template, customPrompt, mic, micOnly }
 
 chrome.runtime.onMessage.addListener((m) => {
   if (m.target !== "offscreen") return;
-  if (m.type === "OFF_START") start(m.streamId);
+  if (m.type === "OFF_START") start(m.streamId, m.opts);
   if (m.type === "OFF_STOP") stop();
   if (m.type === "OFF_SAVE") save(m.title);
 });
@@ -31,20 +38,49 @@ const send = (p) => chrome.runtime.sendMessage({ target: "bg", ...p }).catch(() 
 const token = async () => (await chrome.storage.local.get("session")).session || null;
 const elapsed = () => Math.round((Date.now() - startedAt) / 1000);
 
-async function start(streamId) {
+function stopTracks() {
+  tabStream?.getTracks().forEach((t) => t.stop());
+  micStream?.getTracks().forEach((t) => t.stop());
+}
+
+async function start(streamId, startOpts) {
+  opts = startOpts || {};
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
-    });
     audioCtx = new AudioContext();
-    audioCtx.createMediaStreamSource(stream).connect(audioCtx.destination); // keep audible
+    const dest = audioCtx.createMediaStreamDestination();
+    let sources = 0;
+
+    if (streamId) {
+      tabStream = await navigator.mediaDevices.getUserMedia({
+        audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
+      });
+      audioCtx.createMediaStreamSource(tabStream).connect(dest);
+      audioCtx.createMediaStreamSource(tabStream).connect(audioCtx.destination); // keep the tab audible
+      sources++;
+    }
+
+    if (opts.mic) {
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+        audioCtx.createMediaStreamSource(micStream).connect(dest);
+        sources++;
+      } catch {
+        // Mic denied: fine if we still have tab audio; fatal if it was the only source.
+        if (!streamId) throw new Error("Нет доступа к микрофону — разреши его в настройках Chrome и попробуй снова.");
+      }
+    }
+
+    if (!sources) throw new Error("Нет источника звука для записи.");
+    recStream = dest.stream;
 
     partsA = [];
-    recA = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    recA = new MediaRecorder(recStream, { mimeType: "audio/webm" });
     recA.ondataavailable = (e) => e.data.size && partsA.push(e.data);
     recA.onstop = () => {
       lastBlob = new Blob(partsA, { type: "audio/webm" });
-      stream?.getTracks().forEach((t) => t.stop());
+      stopTracks();
       audioCtx?.close();
     };
     recA.start();
@@ -54,6 +90,7 @@ async function start(streamId) {
     startedAt = Date.now();
     startSegment();
   } catch (e) {
+    stopTracks();
     send({ type: "FATAL", error: String(e?.message || e) });
   }
 }
@@ -62,7 +99,7 @@ function startSegment() {
   if (!recording) return;
   const base = elapsed();
   partsB = [];
-  recB = new MediaRecorder(stream, { mimeType: "audio/webm" });
+  recB = new MediaRecorder(recStream, { mimeType: "audio/webm" });
   recB.ondataavailable = (e) => e.data.size && partsB.push(e.data);
   recB.onstop = async () => {
     await transcribeSegment(new Blob(partsB, { type: "audio/webm" }), base);
@@ -80,7 +117,8 @@ async function transcribeSegment(blob, base) {
   const s = await token();
   if (!s?.access_token) return;
   try {
-    const tr = await fetch(`${APP_URL}/api/transcribe?dur=${CHUNK_MS / 1000}&lang=auto`, {
+    const lang = opts.lang || "auto";
+    const tr = await fetch(`${APP_URL}/api/transcribe?dur=${CHUNK_MS / 1000}&lang=${encodeURIComponent(lang)}`, {
       method: "POST",
       headers: { "Content-Type": "audio/webm", Authorization: `Bearer ${s.access_token}` },
       body: blob,
@@ -107,20 +145,24 @@ function stop() {
 
 async function finalize() {
   durSec = elapsed();
-  if (!live.length) return send({ type: "FATAL", error: "Couldn't hear speech in that tab." });
+  if (!live.length) return send({ type: "FATAL", error: "Не удалось расслышать речь. Проверь, что во вкладке/микрофоне был звук." });
   send({ type: "STATUS", text: "Summarizing…" });
   const s = await token();
   try {
     const sm = await fetch(`${APP_URL}/api/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.access_token}` },
-      body: JSON.stringify({ transcript: live, durSec }),
+      body: JSON.stringify({
+        transcript: live,
+        durSec,
+        template: opts.template || "auto",
+        customPrompt: opts.customPrompt || "",
+      }),
     });
     const { summary } = await sm.json();
     lastResult = { transcript: live, summary: summary || { tldr: "", keyPoints: [], nextSteps: [] } };
     send({ type: "RESULT", transcript: lastResult.transcript, summary: lastResult.summary });
-  } catch (e) {
-    // still hand back the transcript even if the summary failed
+  } catch {
     lastResult = { transcript: live, summary: { tldr: "", keyPoints: [], nextSteps: [] } };
     send({ type: "RESULT", transcript: live, summary: lastResult.summary });
   }

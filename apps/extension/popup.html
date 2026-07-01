@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="popup.css">
+<title>Tenet</title>
+</head>
+<body>
+  <div class="popup" data-state="ready" id="popup">
+
+    <!-- ============ MAIN (ready / micmode) ============ -->
+    <div class="main">
+      <div class="head">
+        <svg class="logo" viewBox="0 0 100 100" aria-hidden="true">
+          <defs><linearGradient id="lg" x1="50" y1="2" x2="50" y2="98" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#dadada"/><stop offset="1" stop-color="#9a9a9a"/>
+          </linearGradient></defs>
+          <path fill="url(#lg)" d="M 41.30,11.46 C 38.80,15.26 33.87,22.46 30.41,27.45 C 26.89,32.50 23.94,36.81 23.83,37.10 C 23.77,37.32 18.50,38.91 12.14,40.61 C 5.79,42.26 0.52,43.68 0.46,43.79 C 0.35,43.90 0.18,44.47 0.06,45.09 C -0.11,46.23 0.23,46.23 14.07,46.40 C 30.18,46.57 26.83,47.82 40.33,36.42 L 46.12,31.48 L 46.12,18.04 C 46.12,10.61 46.06,4.54 46.00,4.54 C 45.89,4.60 43.79,7.66 41.30,11.46 M 54.11,18.15 C 54.06,33.35 52.53,30.29 65.80,41.24 L 72.21,46.51 L 86.10,46.51 C 98.98,46.51 100.00,46.46 100.00,45.49 C 100.00,44.98 99.77,44.24 99.55,43.96 C 99.32,43.62 95.35,42.43 90.64,41.18 C 85.99,39.99 80.89,38.63 79.35,38.12 C 76.29,37.04 77.20,38.17 64.78,20.14 C 61.60,15.43 58.20,10.55 57.23,9.30 C 56.27,8.00 55.19,6.47 54.80,5.90 C 54.28,5.05 54.11,7.60 54.11,18.15 M 0.06,54.68 C -0.22,56.04 0.00,56.10 11.41,58.93 C 17.81,60.52 23.09,61.88 23.15,61.94 C 23.20,62.05 26.15,66.31 29.61,71.47 C 33.13,76.63 38.23,84.12 41.07,88.14 L 46.12,95.46 L 46.12,81.56 L 46.12,67.61 L 37.33,60.46 L 28.53,53.32 L 14.41,53.32 C 0.29,53.32 0.29,53.32 0.06,54.68 M 68.12,56.27 C 66.08,57.91 62.11,61.20 59.28,63.53 L 54.06,67.78 L 54.06,81.34 C 54.06,94.89 54.06,94.89 55.36,92.96 C 65.29,78.33 76.06,63.19 77.09,62.34 C 77.82,61.71 87.52,58.99 96.20,56.95 C 99.60,56.15 100.00,55.93 100.00,54.68 C 100.00,53.32 100.00,53.32 85.88,53.32 C 71.81,53.32 71.81,53.32 68.12,56.27"/>
+        </svg>
+        <span class="brand">TENET</span>
+        <button class="gear" id="gear" title="Открыть Tenet" aria-label="Открыть Tenet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.6 1.6 1.6 0 01-3.1 0 1.6 1.6 0 00-2.7-.6l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.3-2.7 1.6 1.6 0 010-3.1 1.6 1.6 0 001.3-2.7l-.1-.1A2 2 0 117.2 4.6l.1.1a1.6 1.6 0 002.7-.6 1.6 1.6 0 013.1 0 1.6 1.6 0 002.7.6l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00.6 2.7 1.6 1.6 0 010 3.1z"/></svg>
+        </button>
+      </div>
+
+      <!-- source: ready -->
+      <div class="src ok">
+        <span class="d"></span>
+        <span class="st">Готов писать <b id="src-name">эту вкладку</b></span>
+      </div>
+      <!-- source: tab audio unavailable → microphone -->
+      <div class="src warn">
+        <span class="d"></span>
+        <span class="st">Звук вкладки недоступен — запишу с твоего микрофона</span>
+      </div>
+
+      <div class="label">Тип звонка</div>
+      <div class="tpls-wrap">
+        <div class="tpls" id="tpls" role="radiogroup" aria-label="Тип звонка">
+          <button class="tpl sel" role="radio" aria-checked="true" tabindex="0" data-tpl="auto" data-custom="0">
+            <span class="tico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z"/></svg></span>
+            <span class="ttx"><span class="tname">Авто <span class="badge">рекомендуется</span></span><span class="tdesc">Сам определит по разговору</span></span>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          </button>
+          <button class="tpl" role="radio" aria-checked="false" tabindex="-1" data-tpl="1on1" data-custom="0">
+            <span class="tico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM3 21v-1a6 6 0 0112 0v1"/></svg></span>
+            <span class="ttx"><span class="tname">1:1 / синк</span><span class="tdesc">Договорённости и блокеры</span></span>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          </button>
+          <button class="tpl" role="radio" aria-checked="false" tabindex="-1" data-tpl="sales" data-custom="0">
+            <span class="tico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 14l3-3 3 3 5-5"/></svg></span>
+            <span class="ttx"><span class="tname">Продажи</span><span class="tdesc">Возражения и следующие шаги</span></span>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          </button>
+          <button class="tpl" role="radio" aria-checked="false" tabindex="-1" data-tpl="interview" data-custom="0">
+            <span class="tico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-4.3-4.3M11 19a8 8 0 110-16 8 8 0 010 16z"/></svg></span>
+            <span class="ttx"><span class="tname">Интервью / ресёрч</span><span class="tdesc">Инсайты и цитаты юзера</span></span>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          </button>
+          <button class="tpl" role="radio" aria-checked="false" tabindex="-1" data-tpl="lecture" data-custom="0">
+            <span class="tico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></span>
+            <span class="ttx"><span class="tname">Лекция</span><span class="tdesc">Тезисы и термины</span></span>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          </button>
+          <button class="tpl" role="radio" aria-checked="false" tabindex="-1" data-tpl="custom" data-custom="1">
+            <span class="tico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+            <span class="ttx"><span class="tname">Свой шаблон…</span><span class="tdesc">Опиши, что выделить из звонка</span></span>
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="custom" id="custom">
+        <textarea id="custom-text" placeholder="Например: вытащи все договорённости по цене, сроки и кто за что отвечает…" aria-label="Свой промпт для саммари"></textarea>
+      </div>
+
+      <div class="quick">
+        <div class="qcell">
+          <button class="qbtn" id="lang" aria-haspopup="menu" aria-expanded="false">
+            <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>
+            <span class="qk">Язык<br>речи</span>
+            <span class="qv"><span id="langv">Авто</span><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></span>
+          </button>
+          <div class="langmenu" id="langmenu" role="menu">
+            <button role="menuitemradio" aria-checked="true" data-l="Авто" data-code="auto">Авто <span class="mtag">— определит сам</span><svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></button>
+            <button role="menuitemradio" aria-checked="false" data-l="RU" data-code="ru">Русский<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></button>
+            <button role="menuitemradio" aria-checked="false" data-l="EN" data-code="en">English<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></button>
+            <button role="menuitemradio" aria-checked="false" data-l="KZ" data-code="kk">Қазақша<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></button>
+          </div>
+        </div>
+        <button class="qbtn" id="mic" role="switch" aria-checked="true" aria-label="Подмешивать микрофон">
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a3 3 0 013 3v5a3 3 0 01-6 0V6a3 3 0 013-3z"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+          <span class="qk">+ Твой<br>микрофон</span>
+          <span class="qsw on" id="micsw"></span>
+        </button>
+      </div>
+
+      <button class="start" id="start">
+        <span class="rd"></span><span class="lbl">Начать запись</span>
+      </button>
+      <div class="err" id="err"></div>
+    </div>
+
+    <!-- ============ SIGNED-OUT (login) ============ -->
+    <div class="auth">
+      <div class="head">
+        <svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><path fill="url(#lg)" d="M 41.30,11.46 C 38.80,15.26 33.87,22.46 30.41,27.45 C 26.89,32.50 23.94,36.81 23.83,37.10 C 23.77,37.32 18.50,38.91 12.14,40.61 C 5.79,42.26 0.52,43.68 0.46,43.79 C 0.35,43.90 0.18,44.47 0.06,45.09 C -0.11,46.23 0.23,46.23 14.07,46.40 C 30.18,46.57 26.83,47.82 40.33,36.42 L 46.12,31.48 L 46.12,18.04 C 46.12,10.61 46.06,4.54 46.00,4.54 C 45.89,4.60 43.79,7.66 41.30,11.46 M 54.11,18.15 C 54.06,33.35 52.53,30.29 65.80,41.24 L 72.21,46.51 L 86.10,46.51 C 98.98,46.51 100.00,46.46 100.00,45.49 C 100.00,44.98 99.77,44.24 99.55,43.96 C 99.32,43.62 95.35,42.43 90.64,41.18 C 85.99,39.99 80.89,38.63 79.35,38.12 C 76.29,37.04 77.20,38.17 64.78,20.14 C 61.60,15.43 58.20,10.55 57.23,9.30 C 56.27,8.00 55.19,6.47 54.80,5.90 C 54.28,5.05 54.11,7.60 54.11,18.15 M 0.06,54.68 C -0.22,56.04 0.00,56.10 11.41,58.93 C 17.81,60.52 23.09,61.88 23.15,61.94 C 23.20,62.05 26.15,66.31 29.61,71.47 C 33.13,76.63 38.23,84.12 41.07,88.14 L 46.12,95.46 L 46.12,81.56 L 46.12,67.61 L 37.33,60.46 L 28.53,53.32 L 14.41,53.32 C 0.29,53.32 0.29,53.32 0.06,54.68 M 68.12,56.27 C 66.08,57.91 62.11,61.20 59.28,63.53 L 54.06,67.78 L 54.06,81.34 C 54.06,94.89 54.06,94.89 55.36,92.96 C 65.29,78.33 76.06,63.19 77.09,62.34 C 77.82,61.71 87.52,58.99 96.20,56.95 C 99.60,56.15 100.00,55.93 100.00,54.68 C 100.00,53.32 100.00,53.32 85.88,53.32 C 71.81,53.32 71.81,53.32 68.12,56.27"/></svg>
+        <span class="brand">TENET</span>
+      </div>
+      <h2 id="auth-title">Войди в Tenet</h2>
+      <p class="sub">Тот же аккаунт, что и на app.tenet.blog. Запись → транскрипт → саммари в твоём аккаунте.</p>
+      <div class="field"><label>Email</label><input id="email" type="email" placeholder="you@work.com" autocomplete="email"></div>
+      <div class="field"><label>Пароль</label><input id="password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+      <div class="err" id="auth-err"></div>
+      <button class="signin" id="signin">Войти</button>
+      <div class="swap" id="swap">Впервые тут? <u>Создать аккаунт</u></div>
+    </div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -29,18 +29,24 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
   if (m.type === "START_RECORDING") {
     (async () => {
       try {
+        const opts = m.opts || {};
         const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-        if (!tab) throw new Error("No active tab.");
+        if (!tab) throw new Error("Нет активной вкладки.");
         if (BLOCKED.test(tab.url || "")) {
           throw new Error(
-            "This page can't be recorded. Open a normal tab that plays audio (Google Meet, Zoom, YouTube), then record."
+            "На служебной странице Chrome записать нельзя — открой вкладку встречи (Meet/Zoom) или любой сайт, затем запусти запись."
           );
         }
         recordingTabId = tab.id;
+        // The on-page bar (live transcript + controls) lives on the meeting tab.
         await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
-        const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+        // Tab audio — skipped for a mic-only recording.
+        let streamId = null;
+        if (!opts.micOnly) {
+          streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+        }
         await ensureOffscreen();
-        await chrome.runtime.sendMessage({ target: "offscreen", type: "OFF_START", streamId });
+        await chrome.runtime.sendMessage({ target: "offscreen", type: "OFF_START", streamId, opts });
         sendResponse({ ok: true, title: tab.title });
       } catch (e) {
         sendResponse({ ok: false, error: String(e?.message || e) });
