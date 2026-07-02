@@ -129,7 +129,6 @@ async function detectSource() {
   if (!tab || BLOCKED.test(tab.url || "")) {
     setState("micmode");
   } else {
-    $("src-name").textContent = appName(tab.url) || tab.title || "эту вкладку";
     setState("ready");
   }
 }
