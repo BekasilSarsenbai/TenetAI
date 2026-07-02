@@ -160,7 +160,7 @@ function stop() {
 async function finalize() {
   durSec = elapsed();
   if (!live.length) return send({ type: "FATAL", error: "Не удалось расслышать речь. Проверь, что во вкладке/микрофоне был звук." });
-  send({ type: "STATUS", text: "Summarizing…" });
+  send({ type: "STATUS", text: "Обрабатываю…" });
   const s = await token();
   try {
     const sm = await fetch(`${APP_URL}/api/summarize`, {
