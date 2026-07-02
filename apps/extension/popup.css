@@ -145,6 +145,14 @@ button:focus:not(:focus-visible){outline:none}
 .auth .swap u{color:var(--t1);cursor:pointer}
 .auth .err{margin-top:2px;margin-bottom:8px;text-align:left}
 
+/* ---- loading (initial state — keeps the popup compact until we know auth) ---- */
+.loading{display:none;align-items:center;justify-content:center;padding:30px 0}
+.loading svg{width:30px;height:30px;animation:tn-pulse 1.4s ease-in-out infinite}
+@keyframes tn-pulse{0%,100%{opacity:.4;transform:scale(.93)}50%{opacity:1;transform:scale(1)}}
+.popup[data-state="loading"] .main,
+.popup[data-state="loading"] .auth{display:none}
+.popup[data-state="loading"] .loading{display:flex}
+
 /* ---- state visibility ---- */
 .popup[data-state="signedout"] .main{display:none}
 .popup[data-state="signedout"] .auth{display:flex}

@@ -46,7 +46,6 @@ const fireWelcome = (email) =>
 
 /* ---------- template radio group ---------- */
 const tpls = [...document.querySelectorAll(".tpl")];
-const customBox = $("custom");
 function selectTpl(el) {
   tpls.forEach((t) => {
     const s = t === el;
@@ -55,7 +54,6 @@ function selectTpl(el) {
     t.tabIndex = s ? 0 : -1;
   });
   template = el.dataset.tpl;
-  customBox.classList.toggle("show", el.dataset.custom === "1");
   refreshFade();
 }
 tpls.forEach((t) => t.addEventListener("click", () => selectTpl(t)));
@@ -144,8 +142,6 @@ startBtn.addEventListener("click", async () => {
   $("err").textContent = "";
   startBtn.disabled = true;
   lbl.textContent = "Запускаю…";
-
-  if (template === "custom") customPrompt = ($("custom-text").value || "").trim();
 
   // If the mic is on, prompt for permission here (visible page + user gesture),
   // so the offscreen document can reuse the grant. Non-fatal if it fails.

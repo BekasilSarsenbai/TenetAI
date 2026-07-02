@@ -46,17 +46,10 @@ function stopTracks() {
 async function start(streamId, startOpts) {
   opts = startOpts || {};
   try {
-    audioCtx = new AudioContext();
-    const dest = audioCtx.createMediaStreamDestination();
-    let sources = 0;
-
     if (streamId) {
       tabStream = await navigator.mediaDevices.getUserMedia({
         audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
       });
-      audioCtx.createMediaStreamSource(tabStream).connect(dest);
-      audioCtx.createMediaStreamSource(tabStream).connect(audioCtx.destination); // keep the tab audible
-      sources++;
     }
 
     if (opts.mic) {
@@ -64,16 +57,37 @@ async function start(streamId, startOpts) {
         micStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         });
-        audioCtx.createMediaStreamSource(micStream).connect(dest);
-        sources++;
       } catch {
         // Mic denied: fine if we still have tab audio; fatal if it was the only source.
-        if (!streamId) throw new Error("Нет доступа к микрофону — разреши его в настройках Chrome и попробуй снова.");
+        if (!streamId) throw new Error("Нет доступа к микрофону — разреши его и попробуй снова.");
       }
     }
 
-    if (!sources) throw new Error("Нет источника звука для записи.");
-    recStream = dest.stream;
+    if (!tabStream && !micStream) throw new Error("Нет источника звука для записи.");
+
+    if (tabStream && micStream) {
+      // Both: mix tab audio + microphone through an AudioContext. resume() is
+      // essential — an offscreen AudioContext starts suspended and would produce
+      // a silent stream otherwise.
+      audioCtx = new AudioContext();
+      try { await audioCtx.resume(); } catch {}
+      const dest = audioCtx.createMediaStreamDestination();
+      const tabSrc = audioCtx.createMediaStreamSource(tabStream);
+      tabSrc.connect(dest);
+      tabSrc.connect(audioCtx.destination); // keep the tab audible
+      audioCtx.createMediaStreamSource(micStream).connect(dest);
+      recStream = dest.stream;
+    } else if (tabStream) {
+      // Tab only — record the RAW captured stream (no AudioContext dependency),
+      // and replay it so the tab stays audible (tabCapture mutes the original).
+      recStream = tabStream;
+      audioCtx = new AudioContext();
+      try { await audioCtx.resume(); } catch {}
+      audioCtx.createMediaStreamSource(tabStream).connect(audioCtx.destination);
+    } else {
+      // Microphone only — record the raw mic stream.
+      recStream = micStream;
+    }
 
     partsA = [];
     recA = new MediaRecorder(recStream, { mimeType: "audio/webm" });
