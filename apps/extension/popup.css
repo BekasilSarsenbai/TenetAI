@@ -137,8 +137,7 @@ button:focus:not(:focus-visible){outline:none}
 .auth .err{margin-top:2px;margin-bottom:7px;text-align:left}
 
 /* ---- loading (initial state — keeps the popup compact until we know auth) ---- */
-.loading{display:none;align-items:center;justify-content:center;padding:24px 0}
-.loading svg{width:26px;height:26px;opacity:.7}
+.loading{display:none;height:18px}
 .popup[data-state="loading"] .main,
 .popup[data-state="loading"] .auth{display:none}
 .popup[data-state="loading"] .loading{display:flex}
