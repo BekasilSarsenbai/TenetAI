@@ -31,8 +31,8 @@
     .time{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;color:#E8E8EA}
     .msg{font-size:12px;color:#C8C8CE;font-weight:500}
     .link{color:#FFB454;font-weight:700;text-decoration:none;cursor:pointer}
-    .arr{display:inline-flex;align-items:center;color:#FFB454;text-decoration:none;cursor:pointer;margin-left:1px}
-    .arr svg{width:15px;height:15px}
+    .arr{display:inline-flex;align-items:center;color:#FFB454;text-decoration:none;cursor:pointer}
+    .arr svg{width:15px;height:15px;display:block}
     .stop{max-width:0;opacity:0;overflow:hidden;white-space:nowrap;padding:0;margin:0;border:0;background:#FF5E5E;color:#fff;
       border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;transition:max-width .18s,opacity .16s,padding .18s}
     .bar.rec:hover .stop{max-width:92px;opacity:1;padding:5px 11px}
@@ -44,6 +44,7 @@
     <span class="time" id="time">0:00</span>
     <span class="msg hide" id="msg"></span>
     <button class="stop" id="stop">■ Стоп</button>
+    <a class="arr hide" id="open" target="_blank" title="Открыть в Tenet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>`;
 
   const $ = (id) => root.getElementById(id);
@@ -101,7 +102,10 @@
     if (m.type === "SAVED") {
       if (m.ok) {
         bar.classList.add("done");
-        status("").innerHTML = `Сохранено <a class="arr" href="https://app.tenet.blog" target="_blank" title="Открыть в Tenet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>`;
+        status("Сохранено");
+        const open = $("open");
+        open.href = "https://app.tenet.blog";
+        open.classList.remove("hide");
         setTimeout(destroy, 6000);
       } else {
         status("Не удалось сохранить: " + (m.error || ""));
