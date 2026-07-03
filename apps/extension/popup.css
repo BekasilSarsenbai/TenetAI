@@ -15,13 +15,13 @@
   font-family:Manrope,-apple-system,system-ui,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:320px}
-body{background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased}
+html,body{width:320px;background:transparent}
+body{background:transparent;color:var(--t1);-webkit-font-smoothing:antialiased}
 
 button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 button:focus:not(:focus-visible){outline:none}
 
-.popup{width:320px;background:var(--bg);padding:13px;position:relative;overflow:hidden}
+.popup{width:320px;background:var(--bg);padding:13px;position:relative;overflow:hidden;border-radius:16px}
 .popup::before{content:'';position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(320px 130px at 18% 0%, rgba(255,255,255,0.035), transparent 70%)}
 
