@@ -263,11 +263,12 @@ export function NoteView({
     scrollPanelDown();
   }
 
-  function sendAsk() {
+  async function sendAsk() {
     const v = draft.trim();
     if (!v) return;
     setDraft("");
     setTab("chat");
+
     if (isDemoNote) {
       const lv = v.toLowerCase();
       const match = ASKQA.find((x) => {
@@ -284,16 +285,29 @@ export function NoteView({
           cites: null,
         };
       answer(item, v);
-    } else {
-      setThread((t) => [
-        ...t,
-        {
-          q: v,
-          a: "Живой AI-чат скоро появится — ответы со ссылками на тайм-коды прямо из вашего транскрипта. Пока что откройте «Key points» или вкладку Transcript, чтобы перейти к нужному моменту.",
-        },
-      ]);
-      scrollPanelDown();
+      return;
     }
+
+    // Real note → live, transcript-grounded AI chat.
+    const history = thread.flatMap((it) => [
+      { role: "user" as const, content: it.q },
+      { role: "assistant" as const, content: it.a },
+    ]);
+    setThread((t) => [...t, { q: v, a: "…" }]);
+    scrollPanelDown();
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: realTr ?? [], question: v, history }),
+      });
+      const data = await res.json().catch(() => null);
+      const a = (data?.answer && String(data.answer).trim()) || "Не удалось получить ответ — попробуйте ещё раз.";
+      setThread((t) => t.map((it, i) => (i === t.length - 1 ? { ...it, a } : it)));
+    } catch {
+      setThread((t) => t.map((it, i) => (i === t.length - 1 ? { ...it, a: "Ошибка сети — попробуйте ещё раз." } : it)));
+    }
+    scrollPanelDown();
   }
 
   // ---- key points (real summary or demo showcase) ----
@@ -545,8 +559,7 @@ export function NoteView({
                 ))}
                 {!isDemoNote && thread.length === 0 && (
                   <div className="panel-empty">
-                    Ask anything about this meeting — grounded, timestamped answers are coming.
-                    For now, jump to any moment from Key points or the Transcript.
+                    Спросите что угодно про эту встречу — отвечу строго по транскрипту.
                   </div>
                 )}
               </>

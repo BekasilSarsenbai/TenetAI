@@ -32,7 +32,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api/welcome") ||
     pathname.startsWith("/api/transcribe") ||
-    pathname.startsWith("/api/summarize");
+    pathname.startsWith("/api/summarize") ||
+    pathname.startsWith("/api/chat");
 
   const target = request.nextUrl.clone();
   target.pathname = "/product" + (pathname === "/" ? "" : pathname);
