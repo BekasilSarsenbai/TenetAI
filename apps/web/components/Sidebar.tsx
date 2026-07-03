@@ -5,7 +5,7 @@ import type { Meeting } from "@/lib/data";
 import type { AppUser } from "@/lib/types";
 import { Plus, Puzzle, Search } from "./icons";
 import { Logo } from "./Logo";
-import { CHROME_STORE_URL } from "@/lib/links";
+import { CHROME_STORE_URL, SHOW_EXTENSION_PROMPT } from "@/lib/links";
 
 export function Sidebar({
   meetings,
@@ -116,9 +116,11 @@ export function Sidebar({
           );
         })}
       </div>
-      <a className="side-ext" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">
-        <Puzzle /> Install Chrome extension
-      </a>
+      {SHOW_EXTENSION_PROMPT && (
+        <a className="side-ext" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">
+          <Puzzle /> Install Chrome extension
+        </a>
+      )}
       <button className="foot" onClick={onProfile}>
         <span className="av">{user.name[0].toUpperCase()}</span>
         <span>
