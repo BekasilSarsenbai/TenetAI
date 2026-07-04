@@ -26,18 +26,23 @@ function pickMime(): string {
 }
 
 /**
- * Real microphone capture. Records via MediaRecorder, draws a live level meter
- * onto the supplied canvas from an AnalyserNode, and tracks elapsed seconds.
- * stop() resolves with the finished audio blob + an object URL for playback.
+ * Microphone capture, plus optional call-tab audio (the other participants).
+ * Everything is mixed through one AudioContext and recorded via MediaRecorder.
+ * The mic starts immediately (great for in-person meetings); addCallAudio() —
+ * which must be triggered by a user gesture — shares a tab and folds its audio
+ * into the ongoing recording so a remote call captures everyone.
  */
 export function useRecorder(
   canvasRef: React.RefObject<HTMLCanvasElement | null>
 ) {
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [seconds, setSeconds] = useState(0);
+  const [callAudio, setCallAudio] = useState(false);
 
-  const streamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const tabStreamRef = useRef<MediaStream | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
+  const destRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -50,13 +55,17 @@ export function useRecorder(
     rafRef.current = null;
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+    micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    micStreamRef.current = null;
+    tabStreamRef.current?.getTracks().forEach((t) => t.stop());
+    tabStreamRef.current = null;
+    destRef.current = null;
     if (ctxRef.current && ctxRef.current.state !== "closed") {
       ctxRef.current.close().catch(() => {});
     }
     ctxRef.current = null;
     analyserRef.current = null;
+    setCallAudio(false);
   }, []);
 
   const draw = useCallback(() => {
@@ -107,12 +116,13 @@ export function useRecorder(
   const start = useCallback(async () => {
     setSeconds(0);
     chunksRef.current = [];
+    setCallAudio(false);
     setStatus("requesting");
 
-    let stream: MediaStream;
+    let micStream: MediaStream;
     try {
       // Speech-tuned capture: clean the signal so transcription stays accurate.
-      stream = await navigator.mediaDevices.getUserMedia({
+      micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -126,7 +136,7 @@ export function useRecorder(
       setStatus(name === "NotAllowedError" || name === "SecurityError" ? "denied" : "error");
       return;
     }
-    streamRef.current = stream;
+    micStreamRef.current = micStream;
 
     try {
       const AudioCtx =
@@ -135,17 +145,22 @@ export function useRecorder(
           .webkitAudioContext;
       const ctx = new AudioCtx();
       await ctx.resume();
-      const source = ctx.createMediaStreamSource(stream);
+      const dest = ctx.createMediaStreamDestination();
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
       analyser.smoothingTimeConstant = 0.7;
-      source.connect(analyser);
+
+      const micSrc = ctx.createMediaStreamSource(micStream);
+      micSrc.connect(dest);
+      micSrc.connect(analyser);
+
       ctxRef.current = ctx;
+      destRef.current = dest;
       analyserRef.current = analyser;
 
-      // Prefer Opus at a generous bitrate — best quality-per-byte for speech.
+      // Record the MIXED destination (mic now; + call audio if added later).
       const mime = pickMime();
-      const rec = new MediaRecorder(stream, {
+      const rec = new MediaRecorder(dest.stream, {
         ...(mime ? { mimeType: mime } : {}),
         audioBitsPerSecond: 128000,
       });
@@ -153,8 +168,6 @@ export function useRecorder(
         if (e.data && e.data.size) chunksRef.current.push(e.data);
       };
       recRef.current = rec;
-      // Timeslice: flush a chunk every second so we never end up with an empty
-      // blob even if the final stop event misbehaves.
       rec.start(1000);
       startedAtRef.current = performance.now();
       setStatus("recording");
@@ -167,6 +180,41 @@ export function useRecorder(
       setStatus("error");
     }
   }, [draw, teardown]);
+
+  // Fold the call tab's audio into the ongoing recording. Must be called from a
+  // user gesture (getDisplayMedia requirement). Returns true on success.
+  const addCallAudio = useCallback(async (): Promise<boolean> => {
+    const ctx = ctxRef.current;
+    const dest = destRef.current;
+    const analyser = analyserRef.current;
+    if (!ctx || !dest) return false;
+    if (tabStreamRef.current) return true; // already capturing the call
+
+    let disp: MediaStream;
+    try {
+      disp = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    } catch {
+      return false; // cancelled / unsupported
+    }
+    disp.getVideoTracks().forEach((t) => t.stop()); // audio only
+    if (!disp.getAudioTracks().length) {
+      disp.getTracks().forEach((t) => t.stop());
+      return false; // user didn't tick "Share tab audio"
+    }
+
+    tabStreamRef.current = disp;
+    const src = ctx.createMediaStreamSource(disp);
+    src.connect(dest);
+    src.connect(analyser);
+    setCallAudio(true);
+
+    // Reflect the user stopping the share from the browser bar.
+    disp.getAudioTracks()[0].addEventListener("ended", () => {
+      tabStreamRef.current = null;
+      setCallAudio(false);
+    });
+    return true;
+  }, []);
 
   const stop = useCallback(() => {
     return new Promise<RecordResult | null>((resolve) => {
@@ -210,5 +258,5 @@ export function useRecorder(
 
   useEffect(() => () => teardown(), [teardown]);
 
-  return { status, seconds, start, stop, reset };
+  return { status, seconds, callAudio, start, addCallAudio, stop, reset };
 }

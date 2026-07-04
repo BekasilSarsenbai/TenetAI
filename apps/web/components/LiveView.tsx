@@ -17,7 +17,7 @@ export function LiveView({
   const [markers, setMarkers] = useState<string[]>([]);
   const [ending, setEnding] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { status, seconds, start, stop, reset } = useRecorder(canvasRef);
+  const { status, seconds, callAudio, start, addCallAudio, stop, reset } = useRecorder(canvasRef);
 
   // Start the mic when the view appears; tear it down when it leaves
   // (navigating away discards the take without creating a note).
@@ -71,10 +71,20 @@ export function LiveView({
             bar to record — or go back and upload a file instead.
           </div>
         ) : (
-          <div className="live-status">
-            Tenet is listening. Speak naturally — your transcript and summary are
-            ready the moment you stop.
-          </div>
+          <>
+            <div className="live-status">
+              {callAudio
+                ? "Recording you and the call. Speak naturally — transcript + summary are ready the moment you stop."
+                : "Tenet is listening to your mic. On a remote call? Add the call audio so everyone is captured — not just you."}
+            </div>
+            <button
+              className={`call-cta${callAudio ? " on" : ""}`}
+              onClick={addCallAudio}
+              disabled={callAudio}
+            >
+              {callAudio ? "🔊 Capturing the call ✓" : "🔊 Add call audio — share the meeting tab"}
+            </button>
+          </>
         )}
       </div>
 
