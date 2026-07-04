@@ -205,7 +205,7 @@ export function useRecorder(
     tabStreamRef.current = disp;
     const src = ctx.createMediaStreamSource(disp);
     src.connect(dest);
-    src.connect(analyser);
+    if (analyser) src.connect(analyser);
     setCallAudio(true);
 
     // Reflect the user stopping the share from the browser bar.
