@@ -18,7 +18,7 @@ function transcriptText(t: TranscriptSegment[]): string {
 const SYSTEM = `You are Tenet, an assistant that answers questions about ONE specific meeting.
 Rules:
 - Answer using ONLY the meeting transcript below. Never invent facts or use outside knowledge.
-- If the transcript doesn't contain the answer, say so plainly (e.g. "Этого не было в этой встрече.").
+- If the transcript doesn't contain the answer, say so plainly (e.g. "That wasn't discussed in this meeting.").
 - Be concise and direct. When you reference a specific moment, cite its timestamp like [12:30].
 - Reply in the same language the user asked in.`;
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   if (!question) return NextResponse.json({ answer: "" }, { headers: CORS });
   if (!transcript.length)
     return NextResponse.json(
-      { answer: "У этой встречи пока нет транскрипта — отвечать не по чему." },
+      { answer: "This meeting doesn't have a transcript yet — nothing to answer from." },
       { headers: CORS }
     );
 
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { answer: "AI-чат сейчас недоступен — на сервере не настроен ключ модели.", source: "none" },
+    { answer: "AI chat is unavailable right now — no model key is configured on the server.", source: "none" },
     { headers: CORS }
   );
 }

@@ -32,13 +32,9 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Russian plural for "реплика" (contributions).
+// Plural for the speaker-stats line count.
 function plural(n: number): string {
-  const a = n % 10;
-  const b = n % 100;
-  if (a === 1 && b !== 11) return "реплика";
-  if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return "реплики";
-  return "реплик";
+  return n === 1 ? "line" : "lines";
 }
 
 function speakerStats(tr: TranscriptSegment[]): string[] {
@@ -302,10 +298,10 @@ export function NoteView({
         body: JSON.stringify({ transcript: realTr ?? [], question: v, history }),
       });
       const data = await res.json().catch(() => null);
-      const a = (data?.answer && String(data.answer).trim()) || "Не удалось получить ответ — попробуйте ещё раз.";
+      const a = (data?.answer && String(data.answer).trim()) || "Couldn't get an answer — please try again.";
       setThread((t) => t.map((it, i) => (i === t.length - 1 ? { ...it, a } : it)));
     } catch {
-      setThread((t) => t.map((it, i) => (i === t.length - 1 ? { ...it, a: "Ошибка сети — попробуйте ещё раз." } : it)));
+      setThread((t) => t.map((it, i) => (i === t.length - 1 ? { ...it, a: "Network error — please try again." } : it)));
     }
     scrollPanelDown();
   }
@@ -330,14 +326,14 @@ export function NoteView({
               <div className="aud">
                 <div className="aud-top">
                   <span className="rd" />
-                  <span className="aud-lbl">Аудио запись</span>
+                  <span className="aud-lbl">Audio recording</span>
                 </div>
                 <div className="aud-row">
                   <button className="aud-play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
                     {playing ? <PauseIcon /> : <PlayTri />}
                   </button>
                   <div className="aud-wave" onClick={seekBar} role="slider"
-                    aria-label="Перемотка записи" aria-valuemin={0} aria-valuemax={Math.round(DURATION)} aria-valuenow={Math.round(cur)}>
+                    aria-label="Seek recording" aria-valuemin={0} aria-valuemax={Math.round(DURATION)} aria-valuenow={Math.round(cur)}>
                     {WAVE.map((h, i) => (
                       <i key={i} className={((i + 0.5) / WAVE.length) * 100 <= pct ? "on" : undefined} style={{ height: h + "%" }} />
                     ))}
@@ -559,7 +555,7 @@ export function NoteView({
                 ))}
                 {!isDemoNote && thread.length === 0 && (
                   <div className="panel-empty">
-                    Спросите что угодно про эту встречу — отвечу строго по транскрипту.
+                    Ask anything about this meeting — answers come straight from the transcript.
                   </div>
                 )}
               </>
