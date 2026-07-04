@@ -133,6 +133,17 @@ async function detectSource() {
   }
 }
 
+/* ---------- mic permission (granted once via the stable permission.html tab) ---------- */
+async function micGranted() {
+  try {
+    const p = await navigator.permissions.query({ name: "microphone" });
+    if (p.state === "granted") return true;
+    if (p.state === "denied") return false;
+  } catch {}
+  try { return !!(await chrome.storage.local.get("micGranted")).micGranted; } catch {}
+  return false;
+}
+
 /* ---------- start ---------- */
 const startBtn = $("start");
 const startLabel = () => (popup.dataset.state === "micmode" ? "Начать с микрофона" : "Начать запись");
@@ -142,15 +153,15 @@ startBtn.addEventListener("click", async () => {
   startBtn.disabled = true;
   lbl.textContent = "Запускаю…";
 
-  // If the mic is on, prompt for permission here (visible page + user gesture),
-  // so the offscreen document can reuse the grant. Non-fatal if it fails.
-  if (micOn) {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-      s.getTracks().forEach((t) => t.stop());
-    } catch {
-      /* denied / dismissed — offscreen will fall back to tab-only */
-    }
+  // Mic needs a permission the (invisible) offscreen recorder can reuse. The
+  // popup can't reliably prompt (it closes on the prompt), so the first time we
+  // send the user to a stable permission tab, then they record again.
+  if (micOn && !(await micGranted())) {
+    chrome.tabs.create({ url: chrome.runtime.getURL("permission.html") });
+    startBtn.disabled = false;
+    startBtn.querySelector(".lbl").textContent = startLabel();
+    $("err").textContent = "Разреши микрофон в открывшейся вкладке, потом нажми «Начать запись» ещё раз.";
+    return;
   }
 
   const resp = await chrome.runtime.sendMessage({
