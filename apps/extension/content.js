@@ -103,8 +103,12 @@
       chrome.runtime.sendMessage({ type: "BAR_SAVE", title: document.title });
     }
     if (m.type === "SAVED") {
-      LOG("SAVED", m.ok, m.error || "");
-      if (m.ok) {
+      LOG("SAVED", m.ok, m.queued, m.error || "");
+      if (m.ok && m.queued) {
+        bar.classList.add("done");
+        status("Нет сети — сохраню позже");
+        setTimeout(destroy, 7000);
+      } else if (m.ok) {
         bar.classList.add("done");
         status("Сохранено");
         const open = $("open");

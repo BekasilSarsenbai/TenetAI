@@ -2,9 +2,14 @@
 // grabs the tab-audio stream id + injects the on-page bar, then asks background
 // to wire up the offscreen recorder. Offscreen records/transcribes/summarizes;
 // background relays its messages back to the bar.
+import { flushPending } from "./save.js";
 
 const DEBUG = true;
 const LOG = (...a) => { if (DEBUG) { try { console.log("[Tenet/bg]", ...a); } catch {} } };
+
+// Retry uploads that were queued offline — on browser start and on install/update.
+chrome.runtime.onStartup.addListener(() => flushPending().catch(() => {}));
+chrome.runtime.onInstalled.addListener(() => flushPending().catch(() => {}));
 
 let recordingTabId = null;
 

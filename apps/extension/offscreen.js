@@ -6,7 +6,8 @@
 // Sources are mixed through a single AudioContext destination:
 //   • tab audio (chrome.tabCapture)  — the other participants
 //   • your microphone (optional)     — your own voice (tab capture never has it)
-import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, LOG, getFreshSession } from "./config.js";
+import { APP_URL, LOG, getFreshSession } from "./config.js";
+import { saveOrQueue } from "./save.js";
 
 const CHUNK_MS = 12000;
 
@@ -194,32 +195,18 @@ async function save(title) {
   const uid = s?.user?.id;
   LOG("save start", { hasToken: !!s?.access_token, uid: !!uid, hasResult: !!lastResult, hasBlob: !!lastBlob?.size });
   if (!s?.access_token || !uid || !lastResult) return send({ type: "SAVED", ok: false, error: "Not ready." });
-  try {
-    const id = crypto.randomUUID();
-    let audio_path = null;
-    if (lastBlob?.size) {
-      audio_path = `${uid}/${id}.webm`;
-      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${audio_path}`, {
-        method: "POST",
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}`, "Content-Type": "audio/webm" },
-        body: lastBlob,
-      });
-      LOG("save: audio upload", up.status);
-      if (!up.ok) audio_path = null;
-    }
-    const row = {
-      id, user_id: uid, title: (title || "Tab recording").slice(0, 80), who: "You",
-      dur_sec: durSec, audio_path, audio_mime: audio_path ? "audio/webm" : null,
-      transcript: lastResult.transcript, summary: lastResult.summary,
-    };
-    const ins = await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
-      method: "POST",
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify(row),
-    });
-    LOG("save: meetings insert", ins.status);
-    send({ type: "SAVED", ok: ins.ok, error: ins.ok ? "" : (await ins.text()).slice(0, 120) });
-  } catch (e) {
-    send({ type: "SAVED", ok: false, error: String(e?.message || e) });
-  }
+  const item = {
+    id: crypto.randomUUID(),
+    user_id: uid,
+    title: (title || "Tab recording").slice(0, 80),
+    dur_sec: durSec,
+    transcript: lastResult.transcript,
+    summary: lastResult.summary,
+    blob: lastBlob?.size ? lastBlob : null,
+    createdAt: Date.now(),
+  };
+  // Save now, or queue in IndexedDB and retry later — never lose a recording.
+  const r = await saveOrQueue(item);
+  if (r.queued) send({ type: "SAVED", ok: true, queued: true });
+  else send({ type: "SAVED", ok: r.ok, error: r.error || "" });
 }

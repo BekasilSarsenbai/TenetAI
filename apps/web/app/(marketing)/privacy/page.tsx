@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "How Tenet handles your data across the web app and the Chrome extension.",
 };
 
-const UPDATED = "27 June 2026";
+const UPDATED = "6 July 2026";
 
 export default function PrivacyPage() {
   return (
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
       <Section title="Where your data lives (subprocessors)">
         <ul style={ul}>
           <li><b>Supabase</b> — authentication, database, and private file storage for your recordings and notes.</li>
-          <li><b>Groq</b> — speech-to-text transcription and AI summarization of the audio/text you submit.</li>
+          <li><b>Deepgram &amp; Groq</b> — speech-to-text transcription (including speaker labels) and AI summarization of the audio/text you submit.</li>
           <li><b>Vercel</b> — application hosting.</li>
           <li><b>Resend</b> — transactional email (e.g. the welcome email).</li>
         </ul>
@@ -86,8 +86,9 @@ export default function PrivacyPage() {
       <Section title="Browser extension permissions">
         <ul style={ul}>
           <li><b>tabCapture</b> — to record the current tab’s audio, only while you are recording.</li>
+          <li><b>activeTab</b> &amp; <b>scripting</b> — to show the on-page recording controls on the tab you choose to record.</li>
           <li><b>offscreen</b> — to run the audio recorder.</li>
-          <li><b>sidePanel</b> &amp; <b>storage</b> — to show the Tenet panel and keep you signed in.</li>
+          <li><b>storage</b> — to keep you signed in and hold a finished recording safely until it finishes uploading.</li>
         </ul>
         The extension communicates only with Tenet’s own services (app.tenet.blog
         and our Supabase project).

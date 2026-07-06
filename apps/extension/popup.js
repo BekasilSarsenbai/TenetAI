@@ -1,4 +1,5 @@
 import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY, LOG } from "./config.js";
+import { flushPending } from "./save.js";
 
 const $ = (id) => document.getElementById(id);
 const popup = $("popup");
@@ -104,6 +105,7 @@ micBtn.addEventListener("click", () => {
   micOn = micBtn.getAttribute("aria-checked") !== "true";
   micBtn.setAttribute("aria-checked", micOn);
   $("micsw").classList.toggle("on", micOn);
+  updateMicNote();
 });
 
 /* ---------- source detection ---------- */
@@ -131,6 +133,7 @@ async function detectSource() {
   } else {
     setState("ready");
   }
+  updateMicNote();
 }
 
 /* ---------- mic permission (granted once via the stable permission.html tab) ---------- */
@@ -142,6 +145,11 @@ async function micGranted() {
   } catch {}
   try { return !!(await chrome.storage.local.get("micGranted")).micGranted; } catch {}
   return false;
+}
+
+// Show the "grant mic" link only when it would actually help (mic on & not yet granted).
+async function updateMicNote() {
+  try { $("micnote").style.display = micOn && !(await micGranted()) ? "" : "none"; } catch {}
 }
 
 /* ---------- start ---------- */
@@ -245,6 +253,7 @@ $("micnote").addEventListener("click", () =>
   session = await loadSession();
   if (session && session.expires_at > Date.now() + 60000) {
     await detectSource();
+    flushPending().catch(() => {});
   } else {
     if (session) await clearSession();
     session = null;
