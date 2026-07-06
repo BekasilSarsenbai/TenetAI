@@ -153,17 +153,9 @@ startBtn.addEventListener("click", async () => {
   startBtn.disabled = true;
   lbl.textContent = "Запускаю…";
 
-  // Mic needs a permission the (invisible) offscreen recorder can reuse. The
-  // popup can't reliably prompt (it closes on the prompt), so the first time we
-  // send the user to a stable permission tab, then they record again.
-  if (micOn && !(await micGranted())) {
-    chrome.tabs.create({ url: chrome.runtime.getURL("permission.html") });
-    startBtn.disabled = false;
-    startBtn.querySelector(".lbl").textContent = startLabel();
-    $("err").textContent = "Разреши микрофон в открывшейся вкладке, потом нажми «Начать запись» ещё раз.";
-    return;
-  }
-
+  // Recording must ALWAYS start (bar + call/tab audio = the other participants,
+  // the main thing for a call). The mic (your own voice) is granted separately
+  // via the "разреши микрофон" link — it never blocks recording.
   const resp = await chrome.runtime.sendMessage({
     type: "START_RECORDING",
     opts: { lang, template, customPrompt, mic: micOn, micOnly: popup.dataset.state === "micmode" },
@@ -221,6 +213,11 @@ $("password").addEventListener("keydown", (e) => e.key === "Enter" && doLogin())
 
 /* ---------- settings / gear → open the web app ---------- */
 $("gear").addEventListener("click", () => chrome.tabs.create({ url: APP_URL }));
+
+/* ---- optional: grant mic to record your own voice (never blocks recording) ---- */
+$("micnote").addEventListener("click", () =>
+  chrome.tabs.create({ url: chrome.runtime.getURL("permission.html") })
+);
 
 /* ---------- init ---------- */
 (async () => {

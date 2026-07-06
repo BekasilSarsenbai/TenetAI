@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tenet — record & summarize calls",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Record any call from your browser tab — no bot joins. Get an AI transcript and summary linked to the exact second.",
   "permissions": [
     "tabCapture",
