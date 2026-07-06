@@ -1,4 +1,4 @@
-import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY, LOG } from "./config.js";
 
 const $ = (id) => document.getElementById(id);
 const popup = $("popup");
@@ -153,20 +153,41 @@ startBtn.addEventListener("click", async () => {
   startBtn.disabled = true;
   lbl.textContent = "Запускаю…";
 
-  // Recording must ALWAYS start (bar + call/tab audio = the other participants,
-  // the main thing for a call). The mic (your own voice) is granted separately
-  // via the "разреши микрофон" link — it never blocks recording.
-  const resp = await chrome.runtime.sendMessage({
-    type: "START_RECORDING",
-    opts: { lang, template, customPrompt, mic: micOn, micOnly: popup.dataset.state === "micmode" },
-  });
+  const micOnly = popup.dataset.state === "micmode";
+  try {
+    // Everything that needs the user gesture / activeTab happens HERE, inside
+    // the click — that's what makes tabCapture + injection reliable. background
+    // just wires up the offscreen recorder afterwards.
+    let tabId = null, streamId = null;
+    if (!micOnly) {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      if (!tab) throw new Error("Нет активной вкладки.");
+      if (BLOCKED.test(tab.url || "")) {
+        throw new Error("На служебной странице Chrome записать нельзя — открой вкладку встречи (Meet/Zoom) или любой сайт.");
+      }
+      tabId = tab.id;
+      LOG("popup: capture tab", tabId, tab.url);
+      // Tab audio (the other participants) — grabbed inside the gesture.
+      streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
+      LOG("popup: streamId", streamId ? "ok" : "NULL");
+      // Inject the on-page recording bar.
+      await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+      LOG("popup: bar injected");
+    }
 
-  if (resp?.ok) {
-    window.close();
-  } else {
+    const resp = await chrome.runtime.sendMessage({
+      type: "START_RECORDING",
+      tabId, streamId,
+      opts: { lang, template, customPrompt, mic: micOn, micOnly },
+    });
+    LOG("popup: bg response", resp);
+    if (resp?.ok) { window.close(); return; }
+    throw new Error(resp?.error || "Не удалось начать запись.");
+  } catch (e) {
+    LOG("popup: START error", e);
     startBtn.disabled = false;
     lbl.textContent = startLabel();
-    $("err").textContent = resp?.error || "Не удалось начать. Открой вкладку со звуком и попробуй снова.";
+    $("err").textContent = String(e?.message || e);
   }
 });
 

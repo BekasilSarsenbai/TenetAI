@@ -6,7 +6,7 @@
 // Sources are mixed through a single AudioContext destination:
 //   • tab audio (chrome.tabCapture)  — the other participants
 //   • your microphone (optional)     — your own voice (tab capture never has it)
-import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET } from "./config.js";
+import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, LOG, getFreshSession } from "./config.js";
 
 const CHUNK_MS = 12000;
 
@@ -35,7 +35,7 @@ chrome.runtime.onMessage.addListener((m) => {
 });
 
 const send = (p) => chrome.runtime.sendMessage({ target: "bg", ...p }).catch(() => {});
-const token = async () => (await chrome.storage.local.get("session")).session || null;
+const token = getFreshSession; // valid (auto-refreshed) session
 const elapsed = () => Math.round((Date.now() - startedAt) / 1000);
 
 function stopTracks() {
@@ -45,11 +45,13 @@ function stopTracks() {
 
 async function start(streamId, startOpts) {
   opts = startOpts || {};
+  LOG("offscreen start", { hasStream: !!streamId, mic: !!opts.mic, micOnly: !!opts.micOnly, lang: opts.lang });
   try {
     if (streamId) {
       tabStream = await navigator.mediaDevices.getUserMedia({
         audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
       });
+      LOG("offscreen: tab audio", tabStream.getAudioTracks().length, "track(s)");
     }
 
     if (opts.mic) {
@@ -57,8 +59,10 @@ async function start(streamId, startOpts) {
         micStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         });
-      } catch {
+        LOG("offscreen: mic audio ok");
+      } catch (e) {
         // Mic denied: fine if we still have tab audio; fatal if it was the only source.
+        LOG("offscreen: mic denied", String(e?.name || e));
         if (!streamId) throw new Error("Нет доступа к микрофону — разреши его и попробуй снова.");
       }
     }
@@ -98,6 +102,7 @@ async function start(streamId, startOpts) {
       audioCtx?.close();
     };
     recA.start();
+    LOG("offscreen: recording started", { src: tabStream && micStream ? "tab+mic" : tabStream ? "tab" : "mic", ctx: audioCtx?.state });
 
     live = [];
     recording = true;
@@ -138,14 +143,15 @@ async function transcribeSegment(blob, base) {
       body: blob,
     });
     const { lines = [] } = await tr.json();
+    LOG("transcribe", tr.status, "→", lines.length, "line(s)", blob.size, "bytes");
     for (const l of lines) {
       const line = { start: base + (l.start || 0), speaker: l.speaker || "Speaker", text: l.text };
       if (!line.text) continue;
       live.push(line);
       send({ type: "PARTIAL", line });
     }
-  } catch {
-    /* a dropped segment shouldn't kill the session */
+  } catch (e) {
+    LOG("transcribe error (segment dropped)", String(e?.message || e));
   }
 }
 
@@ -159,6 +165,7 @@ function stop() {
 
 async function finalize() {
   durSec = elapsed();
+  LOG("finalize", { lines: live.length, durSec });
   if (!live.length) return send({ type: "FATAL", error: "Не удалось расслышать речь. Проверь, что во вкладке/микрофоне был звук." });
   send({ type: "STATUS", text: "Обрабатываю…" });
   const s = await token();
@@ -185,6 +192,7 @@ async function finalize() {
 async function save(title) {
   const s = await token();
   const uid = s?.user?.id;
+  LOG("save start", { hasToken: !!s?.access_token, uid: !!uid, hasResult: !!lastResult, hasBlob: !!lastBlob?.size });
   if (!s?.access_token || !uid || !lastResult) return send({ type: "SAVED", ok: false, error: "Not ready." });
   try {
     const id = crypto.randomUUID();
@@ -196,6 +204,7 @@ async function save(title) {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}`, "Content-Type": "audio/webm" },
         body: lastBlob,
       });
+      LOG("save: audio upload", up.status);
       if (!up.ok) audio_path = null;
     }
     const row = {
@@ -208,7 +217,8 @@ async function save(title) {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}`, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify(row),
     });
-    send({ type: "SAVED", ok: ins.ok, error: ins.ok ? "" : (await ins.text()).slice(0, 80) });
+    LOG("save: meetings insert", ins.status);
+    send({ type: "SAVED", ok: ins.ok, error: ins.ok ? "" : (await ins.text()).slice(0, 120) });
   } catch (e) {
     send({ type: "SAVED", ok: false, error: String(e?.message || e) });
   }

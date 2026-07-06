@@ -3,8 +3,10 @@
 // revealed on hover so it stays out of the way. On stop the recording is
 // processed and auto-saved — the full transcript/summary lives in app.tenet.blog.
 (() => {
-  if (window.__tenetBar) return; // already injected
+  const LOG = (...a) => { try { console.log("[Tenet/bar]", ...a); } catch {} };
+  if (window.__tenetBar) { LOG("bar already present — skip"); return; }
   window.__tenetBar = true;
+  LOG("bar injected");
 
   const fmt = (s) => {
     s = Math.max(0, Math.round(s || 0));
@@ -96,10 +98,12 @@
       status(m.text || "Обрабатываю…");
     }
     if (m.type === "RESULT") {
+      LOG("RESULT → saving");
       status("Сохраняю…");
       chrome.runtime.sendMessage({ type: "BAR_SAVE", title: document.title });
     }
     if (m.type === "SAVED") {
+      LOG("SAVED", m.ok, m.error || "");
       if (m.ok) {
         bar.classList.add("done");
         status("Сохранено");
@@ -111,7 +115,7 @@
         status("Не удалось сохранить: " + (m.error || ""));
       }
     }
-    if (m.type === "FATAL") status(m.text || "Ошибка записи");
+    if (m.type === "FATAL") { LOG("FATAL", m.text); status(m.text || "Ошибка записи"); }
   });
 
   function destroy() {

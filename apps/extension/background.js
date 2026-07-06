@@ -1,10 +1,10 @@
-// Orchestrates the floating-bar recording:
-//   side panel "Record this tab" → background injects the bar + starts capture
-//   → offscreen records/transcribes/summarizes → background relays to the bar.
+// Orchestrates the floating-bar recording. The popup (inside the user gesture)
+// grabs the tab-audio stream id + injects the on-page bar, then asks background
+// to wire up the offscreen recorder. Offscreen records/transcribes/summarizes;
+// background relays its messages back to the bar.
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-});
+const DEBUG = true;
+const LOG = (...a) => { if (DEBUG) { try { console.log("[Tenet/bg]", ...a); } catch {} } };
 
 let recordingTabId = null;
 
@@ -22,33 +22,22 @@ async function ensureOffscreen() {
   creating = null;
 }
 
-const BLOCKED = /^(chrome|edge|about|chrome-extension|devtools|view-source):|^https:\/\/chrome\.google\.com\/webstore/;
-
 chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
-  // ----- from the side panel -----
+  // ----- from the popup (stream id + bar already set up inside the gesture) -----
   if (m.type === "START_RECORDING") {
     (async () => {
       try {
-        const opts = m.opts || {};
-        const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-        if (!tab) throw new Error("Нет активной вкладки.");
-        if (BLOCKED.test(tab.url || "")) {
-          throw new Error(
-            "На служебной странице Chrome записать нельзя — открой вкладку встречи (Meet/Zoom) или любой сайт, затем запусти запись."
-          );
-        }
-        recordingTabId = tab.id;
-        // The on-page bar (live transcript + controls) lives on the meeting tab.
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
-        // Tab audio — skipped for a mic-only recording.
-        let streamId = null;
-        if (!opts.micOnly) {
-          streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-        }
+        LOG("START_RECORDING", { tabId: m.tabId, hasStream: !!m.streamId, opts: m.opts });
+        recordingTabId = m.tabId ?? null;
         await ensureOffscreen();
-        await chrome.runtime.sendMessage({ target: "offscreen", type: "OFF_START", streamId, opts });
-        sendResponse({ ok: true, title: tab.title });
+        LOG("offscreen ready → OFF_START");
+        await chrome.runtime.sendMessage({
+          target: "offscreen", type: "OFF_START",
+          streamId: m.streamId || null, opts: m.opts || {},
+        });
+        sendResponse({ ok: true });
       } catch (e) {
+        LOG("START error", e);
         sendResponse({ ok: false, error: String(e?.message || e) });
       }
     })();
@@ -67,7 +56,9 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
   if (m.type === "BAR_MARK") return; // (markers are a Phase-2 nicety)
 
   // ----- from offscreen → relay to the bar in the recording tab -----
-  if (m.target === "bg" && recordingTabId != null) {
+  if (m.target === "bg") {
+    if (["RESULT", "SAVED", "FATAL", "STATUS"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
+    if (recordingTabId == null) return;
     const to = (payload) => chrome.tabs.sendMessage(recordingTabId, { target: "bar", ...payload }).catch(() => {});
     if (m.type === "PARTIAL") to({ type: "PARTIAL", line: m.line });
     if (m.type === "STATUS") to({ type: "STATUS", text: m.text });
