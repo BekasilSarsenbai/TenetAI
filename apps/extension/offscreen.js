@@ -27,6 +27,7 @@ let live = []; // accumulated transcript lines
 let lastBlob = null;
 let lastResult = null;
 let opts = {}; // { lang, template, customPrompt, mic, micOnly }
+let diag = {}; // per-session diagnostics for the "empty transcript" case
 
 chrome.runtime.onMessage.addListener((m) => {
   if (m.target !== "offscreen") return;
@@ -46,13 +47,19 @@ function stopTracks() {
 
 async function start(streamId, startOpts) {
   opts = startOpts || {};
+  diag = { tabTracks: 0, tabMuted: null, micOk: false, segs: 0, okSegs: 0, lastStatus: 0, bytes: 0 };
   LOG("offscreen start", { hasStream: !!streamId, mic: !!opts.mic, micOnly: !!opts.micOnly, lang: opts.lang });
+  send({ type: "DIAG", text: `start hasStream=${!!streamId} mic=${!!opts.mic} micOnly=${!!opts.micOnly}` });
   try {
     if (streamId) {
       tabStream = await navigator.mediaDevices.getUserMedia({
         audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
       });
-      LOG("offscreen: tab audio", tabStream.getAudioTracks().length, "track(s)");
+      const tt = tabStream.getAudioTracks()[0];
+      diag.tabTracks = tabStream.getAudioTracks().length;
+      diag.tabMuted = tt ? tt.muted : null;
+      LOG("offscreen: tab audio", diag.tabTracks, "track(s)", tt ? `muted=${tt.muted} state=${tt.readyState}` : "");
+      send({ type: "DIAG", text: `tab audio ${diag.tabTracks} track(s) muted=${tt?.muted} state=${tt?.readyState}` });
     }
 
     if (opts.mic) {
@@ -60,10 +67,13 @@ async function start(streamId, startOpts) {
         micStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         });
+        diag.micOk = true;
         LOG("offscreen: mic audio ok");
+        send({ type: "DIAG", text: "mic audio ok" });
       } catch (e) {
         // Mic denied: fine if we still have tab audio; fatal if it was the only source.
         LOG("offscreen: mic denied", String(e?.name || e));
+        send({ type: "DIAG", text: `mic denied: ${String(e?.name || e)}` });
         if (!streamId) throw new Error("Нет доступа к микрофону — разреши его и попробуй снова.");
       }
     }
@@ -103,7 +113,9 @@ async function start(streamId, startOpts) {
       audioCtx?.close();
     };
     recA.start();
-    LOG("offscreen: recording started", { src: tabStream && micStream ? "tab+mic" : tabStream ? "tab" : "mic", ctx: audioCtx?.state });
+    const src = tabStream && micStream ? "tab+mic" : tabStream ? "tab" : "mic";
+    LOG("offscreen: recording started", { src, ctx: audioCtx?.state });
+    send({ type: "DIAG", text: `recording started src=${src} ctx=${audioCtx?.state}` });
 
     live = [];
     recording = true;
@@ -144,7 +156,10 @@ async function transcribeSegment(blob, base) {
       body: blob,
     });
     const { lines = [] } = await tr.json();
+    diag.segs++; diag.lastStatus = tr.status; diag.bytes += blob.size;
+    if (lines.length) diag.okSegs++;
     LOG("transcribe", tr.status, "→", lines.length, "line(s)", blob.size, "bytes");
+    send({ type: "DIAG", text: `transcribe ${tr.status} → ${lines.length} lines, ${blob.size}b` });
     for (const l of lines) {
       const line = { start: base + (l.start || 0), speaker: l.speaker || "Speaker", text: l.text };
       if (!line.text) continue;
@@ -152,7 +167,9 @@ async function transcribeSegment(blob, base) {
       send({ type: "PARTIAL", line });
     }
   } catch (e) {
+    diag.segs++;
     LOG("transcribe error (segment dropped)", String(e?.message || e));
+    send({ type: "DIAG", text: `transcribe ERROR: ${String(e?.message || e)}` });
   }
 }
 
@@ -166,8 +183,19 @@ function stop() {
 
 async function finalize() {
   durSec = elapsed();
-  LOG("finalize", { lines: live.length, durSec });
-  if (!live.length) return send({ type: "FATAL", error: "Не удалось расслышать речь. Проверь, что во вкладке/микрофоне был звук." });
+  LOG("finalize", { lines: live.length, durSec, diag });
+  send({ type: "DIAG", text: `finalize lines=${live.length} tabTracks=${diag.tabTracks} muted=${diag.tabMuted} micOk=${diag.micOk} segs=${diag.segs} okSegs=${diag.okSegs} lastStatus=${diag.lastStatus} bytes=${diag.bytes}` });
+  if (!live.length) {
+    let why;
+    if (!diag.tabTracks && !diag.micOk) why = "не было источника звука";
+    else if (!opts.micOnly && !diag.tabTracks) why = "звук вкладки не захватился (поток не сработал)";
+    else if (diag.segs === 0) why = "не отправился ни один сегмент";
+    else if (diag.lastStatus === 401 || diag.lastStatus === 403) why = `авторизация транскрайба (${diag.lastStatus}) — перелогинься`;
+    else if (diag.lastStatus && diag.lastStatus !== 200) why = `транскрайб вернул ошибку ${diag.lastStatus}`;
+    else if (diag.bytes < 2000) why = "почти не было аудио (тишина во вкладке?)";
+    else why = "звук шёл, но речи не распознано (очень тихо/музыка?)";
+    return send({ type: "FATAL", error: `Пусто — ${why}.` });
+  }
   send({ type: "STATUS", text: "Обрабатываю…" });
   const s = await token();
   try {

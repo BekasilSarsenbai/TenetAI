@@ -62,7 +62,7 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
 
   // ----- from offscreen → relay to the bar in the recording tab -----
   if (m.target === "bg") {
-    if (["RESULT", "SAVED", "FATAL", "STATUS"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
+    if (["RESULT", "SAVED", "FATAL", "STATUS", "DIAG"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
     if (recordingTabId == null) return;
     const to = (payload) => chrome.tabs.sendMessage(recordingTabId, { target: "bar", ...payload }).catch(() => {});
     if (m.type === "PARTIAL") to({ type: "PARTIAL", line: m.line });
