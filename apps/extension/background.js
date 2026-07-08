@@ -69,7 +69,13 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
     // (works even if the call tab was closed).
     if (m.type === "SAVED" && m.ok && !m.queued && m.id && m.id !== lastOpened) {
       lastOpened = m.id;
-      chrome.tabs.create({ url: `${APP_URL}/?n=${m.id}`, active: true }).catch(() => {});
+      const url = `${APP_URL}/?n=${m.id}`;
+      // Redirect the meeting tab ITSELF to the finished note (the call tab
+      // becomes the site). If it was closed, fall back to a fresh tab.
+      const tid = recordingTabId;
+      const openFresh = () => chrome.tabs.create({ url, active: true }).catch(() => {});
+      if (tid != null) chrome.tabs.update(tid, { url, active: true }).catch(openFresh);
+      else openFresh();
     }
     if (recordingTabId == null) return;
     const to = (payload) => chrome.tabs.sendMessage(recordingTabId, { target: "bar", ...payload }).catch(() => {});
