@@ -83,6 +83,18 @@ export function TenetApp({ user }: { user: AppUser }) {
     };
   }, [persist]);
 
+  // Deep-link from the extension: ?n=<id> opens that note as soon as it loads.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("n");
+    if (!id) return;
+    if (meetings.some((m) => m.id === id)) {
+      setActiveId(id);
+      setView("note");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [meetings]);
+
   function showToast(t: string) {
     setToast(t);
     if (toastTimer.current) clearTimeout(toastTimer.current);

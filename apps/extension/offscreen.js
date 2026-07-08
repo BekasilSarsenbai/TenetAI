@@ -235,6 +235,6 @@ async function save(title) {
   };
   // Save now, or queue in IndexedDB and retry later — never lose a recording.
   const r = await saveOrQueue(item);
-  if (r.queued) send({ type: "SAVED", ok: true, queued: true });
-  else send({ type: "SAVED", ok: r.ok, error: r.error || "" });
+  if (r.queued) send({ type: "SAVED", ok: true, queued: true, id: item.id });
+  else send({ type: "SAVED", ok: r.ok, id: item.id, error: r.error || "" });
 }

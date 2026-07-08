@@ -3,6 +3,7 @@
 // to wire up the offscreen recorder. Offscreen records/transcribes/summarizes;
 // background relays its messages back to the bar.
 import { flushPending } from "./save.js";
+import { APP_URL } from "./config.js";
 
 const DEBUG = true;
 const LOG = (...a) => { if (DEBUG) { try { console.log("[Tenet/bg]", ...a); } catch {} } };
@@ -12,6 +13,7 @@ chrome.runtime.onStartup.addListener(() => flushPending().catch(() => {}));
 chrome.runtime.onInstalled.addListener(() => flushPending().catch(() => {}));
 
 let recordingTabId = null;
+let lastOpened = null; // note id we already auto-opened, to avoid double tabs
 
 let creating = null;
 async function ensureOffscreen() {
@@ -63,6 +65,12 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
   // ----- from offscreen → relay to the bar in the recording tab -----
   if (m.target === "bg") {
     if (["RESULT", "SAVED", "FATAL", "STATUS", "DIAG"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
+    // Auto-transition: open the finished note in the app the moment it saves
+    // (works even if the call tab was closed).
+    if (m.type === "SAVED" && m.ok && !m.queued && m.id && m.id !== lastOpened) {
+      lastOpened = m.id;
+      chrome.tabs.create({ url: `${APP_URL}/?n=${m.id}`, active: true }).catch(() => {});
+    }
     if (recordingTabId == null) return;
     const to = (payload) => chrome.tabs.sendMessage(recordingTabId, { target: "bar", ...payload }).catch(() => {});
     if (m.type === "PARTIAL") to({ type: "PARTIAL", line: m.line });

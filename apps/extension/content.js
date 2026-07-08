@@ -122,8 +122,43 @@
     if (m.type === "FATAL") { LOG("FATAL", m.text); status(m.text || "Ошибка записи"); }
   });
 
+  // --- auto-stop when the meeting call ends (best-effort, per platform) ---
+  const H = location.hostname;
+  const isMeet = /meet\.google\./.test(H);
+  const isZoom = /zoom\.(us|com)/.test(H);
+  const isTeams = /teams\.(microsoft|live)\./.test(H);
+  let ended = false, miss = 0;
+  function autoStop(reason) {
+    if (ended || !bar.classList.contains("rec")) return;
+    ended = true;
+    LOG("call ended:", reason, "→ auto-stop");
+    status("Обрабатываю…");
+    chrome.runtime.sendMessage({ type: "BAR_STOP" });
+  }
+  // Tab closed / navigated away entirely → the call is over.
+  window.addEventListener("pagehide", () => autoStop("pagehide"));
+  const endTimer = setInterval(() => {
+    if (ended || !bar.classList.contains("rec")) return;
+    try {
+      const txt = document.body.innerText || "";
+      if (isMeet) {
+        if (/You left the meeting|Вы вышли из встречи|Return to home screen|Вернуться на главный/i.test(txt)) autoStop("meet-left");
+        else {
+          const leaveBtn = document.querySelector('button[aria-label*="Leave call" i],button[aria-label*="Покинуть" i],[data-tooltip*="Leave call" i]');
+          if (!leaveBtn) { if (++miss >= 3) autoStop("meet-no-leave"); } else miss = 0;
+        }
+      } else if (isZoom) {
+        if (/meeting has (been )?ended|you (have )?left the meeting/i.test(txt)) autoStop("zoom-ended");
+      } else if (isTeams) {
+        if (/call ended|you left|meeting ended/i.test(txt)) autoStop("teams-ended");
+      }
+      // Other tabs: rely on manual Стоп / pagehide (no false-positive polling).
+    } catch {}
+  }, 2500);
+
   function destroy() {
     clearInterval(timer);
+    clearInterval(endTimer);
     host.remove();
     window.__tenetBar = false;
   }
