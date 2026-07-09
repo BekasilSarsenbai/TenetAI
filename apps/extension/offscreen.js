@@ -6,7 +6,10 @@
 // Sources are mixed through a single AudioContext destination:
 //   • tab audio (chrome.tabCapture)  — the other participants
 //   • your microphone (optional)     — your own voice (tab capture never has it)
-import { APP_URL, LOG, getFreshSession, fetchT } from "./config.js";
+// IMPORTANT: offscreen documents can NOT use chrome.storage (only
+// chrome.runtime messaging). The session token and all breadcrumbs go through
+// the background worker — never touch chrome.storage from this file.
+import { APP_URL, LOG, fetchT } from "./config.js";
 import { saveOrQueue } from "./save.js";
 
 const CHUNK_MS = 12000;
@@ -37,12 +40,13 @@ chrome.runtime.onMessage.addListener((m) => {
 });
 
 const send = (p) => chrome.runtime.sendMessage({ target: "bg", ...p }).catch(() => {});
-// Breadcrumb that survives SW/offscreen death — shows the last step reached.
-const step = (s) => { LOG("step:", s); try { chrome.storage.local.set({ lastStep: s, lastStepAt: Date.now() }); } catch {} };
-// Full diagnostic snapshot of the last recording — surfaced in the popup so ONE
-// screenshot gives complete ground truth (no devtools needed).
-function dumpDbg(result) { try { chrome.storage.local.set({ dbg: { ...diag, result, ts: Date.now() } }); } catch {} }
-const token = getFreshSession; // valid (auto-refreshed) session
+// Breadcrumb that survives SW/offscreen death — the bg worker writes it to storage.
+const step = (s) => { LOG("step:", s); send({ type: "STEP", s }); };
+// Full diagnostic snapshot of the last recording — bg writes it; the popup shows it.
+function dumpDbg(result) { send({ type: "DBG", dbg: { ...diag, result, ts: Date.now() } }); }
+// Valid (auto-refreshed) session — fetched FROM THE BG WORKER (which has storage).
+// Never throws; null means signed out.
+const token = () => chrome.runtime.sendMessage({ type: "GET_SESSION" }).catch(() => null);
 const elapsed = () => Math.round((Date.now() - startedAt) / 1000);
 
 function stopTracks() {
@@ -155,6 +159,7 @@ function startSegment() {
 async function transcribeSegment(blob, base) {
   diag.calls++;
   if (!blob.size) { diag.emptyBlobs++; return; }
+  diag.rawBytes = (diag.rawBytes || 0) + blob.size; // captured audio, pre-auth
   const s = await token();
   if (!s?.access_token) { diag.noToken = true; return; }
   try {
@@ -253,7 +258,7 @@ async function save(title) {
   };
   // Save now, or queue in IndexedDB and retry later — never lose a recording.
   step("saving");
-  const r = await saveOrQueue(item);
+  const r = await saveOrQueue(item, s);
   step(r.ok ? "saved" : r.queued ? "save-queued" : "save-failed:" + (r.error || ""));
   if (r.queued) send({ type: "SAVED", ok: true, queued: true, id: item.id });
   else send({ type: "SAVED", ok: r.ok, id: item.id, error: r.error || "" });

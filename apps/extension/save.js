@@ -49,8 +49,9 @@ async function idbDelete(id) {
 }
 
 // Upload audio (if any) + insert the meeting row. Returns { ok, error }.
-export async function uploadMeeting(item, session) {
-  const s = session || (await getFreshSession());
+// The session is PASSED IN: offscreen callers can't read storage, so they
+// obtain it from the bg worker; bg/popup callers pass getFreshSession().
+export async function uploadMeeting(item, s) {
   if (!s?.access_token) return { ok: false, error: "no session" };
   try {
     let audio_path = item.audio_path || null;
@@ -100,8 +101,8 @@ export async function uploadMeeting(item, session) {
 
 // Try to save now; on any failure, queue for automatic retry later.
 // Returns { ok, queued, error }.
-export async function saveOrQueue(item) {
-  const r = await uploadMeeting(item);
+export async function saveOrQueue(item, session) {
+  const r = await uploadMeeting(item, session);
   if (r.ok) return { ok: true, queued: false };
   try {
     await idbPut(item);

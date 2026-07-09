@@ -3,7 +3,7 @@
 // to wire up the offscreen recorder. Offscreen records/transcribes/summarizes;
 // background relays its messages back to the bar.
 import { flushPending } from "./save.js";
-import { APP_URL } from "./config.js";
+import { APP_URL, getFreshSession } from "./config.js";
 
 const DEBUG = true;
 const LOG = (...a) => { if (DEBUG) { try { console.log("[Tenet/bg]", ...a); } catch {} } };
@@ -30,6 +30,21 @@ async function ensureOffscreen() {
 }
 
 chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
+  // Offscreen can't read chrome.storage — it asks us for the (auto-refreshed)
+  // session and we persist its breadcrumbs/diagnostics on its behalf.
+  if (m.type === "GET_SESSION") {
+    getFreshSession().then(sendResponse).catch(() => sendResponse(null));
+    return true;
+  }
+  if (m.type === "STEP") {
+    chrome.storage.local.set({ lastStep: m.s, lastStepAt: Date.now() });
+    return;
+  }
+  if (m.type === "DBG") {
+    LOG("dbg:", m.dbg?.result);
+    chrome.storage.local.set({ dbg: m.dbg });
+    return;
+  }
   // ----- from the popup (stream id + bar already set up inside the gesture) -----
   if (m.type === "START_RECORDING") {
     (async () => {
@@ -51,6 +66,7 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
           target: "offscreen", type: "OFF_START",
           streamId, opts: m.opts || {},
         });
+        chrome.storage.local.set({ recActive: true });
         sendResponse({ ok: true });
       } catch (e) {
         LOG("START error", e);
@@ -76,6 +92,7 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
   if (m.target === "bg") {
     (async () => {
       if (["RESULT", "SAVED", "FATAL", "STATUS", "DIAG"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
+      if (m.type === "SAVED" || m.type === "FATAL") chrome.storage.local.set({ recActive: false });
       // Recover the recording tab across service-worker restarts.
       let tid = recordingTabId;
       if (tid == null) { try { tid = (await chrome.storage.session.get("recordingTabId")).recordingTabId ?? null; } catch {} }

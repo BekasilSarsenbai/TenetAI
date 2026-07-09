@@ -264,6 +264,21 @@ $("micnote").addEventListener("click", () =>
   } catch {}
 })();
 
+/* ---- active recording: the popup is the stop button for mic-mode ---- */
+(async () => {
+  try {
+    const { recActive } = await chrome.storage.local.get("recActive");
+    if (!recActive) return;
+    const bar = $("recbar");
+    bar.hidden = false;
+    bar.addEventListener("click", async () => {
+      bar.querySelector("b").textContent = "останавливаю…";
+      await chrome.runtime.sendMessage({ type: "BAR_STOP" }).catch(() => {});
+      setTimeout(() => window.close(), 400);
+    });
+  } catch {}
+})();
+
 /* ---------- init ---------- */
 (async () => {
   session = await loadSession();
