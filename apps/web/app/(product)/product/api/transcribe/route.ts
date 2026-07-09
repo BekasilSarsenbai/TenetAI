@@ -3,7 +3,9 @@ import { DEMO_TRANSCRIPT_TEXT, type TranscriptSegment } from "@/lib/data";
 import { CORS, getUserId } from "@/lib/route-auth";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Full recordings are transcribed in one call (diarization needs the whole
+// file) — give long meetings room. Vercel clamps this to the plan's max.
+export const maxDuration = 300;
 
 type DgUtterance = { start: number; transcript: string; speaker?: number };
 type WhisperSegment = { start: number; text: string };
@@ -20,20 +22,49 @@ export async function POST(request: Request) {
   const dur = Math.max(1, Number(url.searchParams.get("dur")) || 30);
   const lang = (url.searchParams.get("lang") || "auto").toLowerCase();
 
-  const blob = await request.blob();
-  const contentType = request.headers.get("content-type") || blob.type || "audio/webm";
+  // Two input modes: JSON {url} — a (signed) link to the full recording in our
+  // storage (no request-size limit, best diarization), or a raw audio body.
+  const reqType = request.headers.get("content-type") || "";
+  let blob: Blob | null = null;
+  let mediaUrl: string | null = null;
+  if (reqType.includes("application/json")) {
+    const j = await request.json().catch(() => null);
+    const allowed = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    if (typeof j?.url === "string" && allowed && j.url.startsWith(`${allowed}/storage/`)) {
+      mediaUrl = j.url;
+    }
+    if (!mediaUrl)
+      return NextResponse.json({ error: "bad url" }, { status: 400, headers: CORS });
+  } else {
+    blob = await request.blob();
+  }
+  const contentType = reqType && !reqType.includes("json") ? reqType : blob?.type || "audio/webm";
+  const hasAudio = !!mediaUrl || (blob ? blob.size > 0 : false);
 
-  // Try whichever provider is configured, in priority order.
-  if (process.env.DEEPGRAM_API_KEY && blob.size > 0) {
+  // Try whichever provider is configured, in priority order. Kazakh isn't on
+  // Deepgram's nova models — it falls through to Groq Whisper below.
+  if (process.env.DEEPGRAM_API_KEY && hasAudio) {
     try {
-      const lines = await deepgram(blob, contentType, process.env.DEEPGRAM_API_KEY, lang);
+      const lines = await deepgram(blob, mediaUrl, contentType, process.env.DEEPGRAM_API_KEY, lang);
       if (lines) return NextResponse.json({ lines, source: "deepgram" }, { headers: CORS });
     } catch {}
   }
-  if (process.env.GROQ_API_KEY && blob.size > 0) {
+  if (process.env.GROQ_API_KEY && hasAudio) {
     try {
-      const lines = await groqWhisper(blob, contentType, process.env.GROQ_API_KEY, lang);
-      if (lines) return NextResponse.json({ lines, source: "groq" }, { headers: CORS });
+      // Groq needs bytes — pull them from storage when we only have the link.
+      let gBlob = blob;
+      let gType = contentType;
+      if (!gBlob && mediaUrl) {
+        const r = await fetch(mediaUrl);
+        if (r.ok) {
+          gBlob = await r.blob();
+          gType = r.headers.get("content-type") || "audio/webm";
+        }
+      }
+      if (gBlob && gBlob.size > 0) {
+        const lines = await groqWhisper(gBlob, gType, process.env.GROQ_API_KEY, lang);
+        if (lines) return NextResponse.json({ lines, source: "groq" }, { headers: CORS });
+      }
     } catch {}
   }
 
@@ -52,20 +83,32 @@ export async function POST(request: Request) {
   return NextResponse.json({ lines, source: "demo" }, { headers: CORS });
 }
 
-// Deepgram — nova-2 with diarization (real speaker labels).
+// Deepgram model choice, empirically tested (see repo history):
+// nova-3 language=multi transcribes Russian noticeably better than nova-2
+// detect_language ("Бекасыл" vs "Бекасл") and handles RU/EN code-switching.
+function dgParams(lang: string): string {
+  if (lang === "en") return "model=nova-3&language=en";
+  if (lang === "auto" || lang === "ru") return "model=nova-3&language=multi";
+  return `model=nova-2&language=${encodeURIComponent(lang)}`;
+}
+
+// Deepgram — with diarization (real speaker labels). Accepts raw bytes or a
+// link to the recording (Deepgram fetches it itself — no size limits for us).
 async function deepgram(
-  blob: Blob,
+  blob: Blob | null,
+  mediaUrl: string | null,
   contentType: string,
   key: string,
   lang: string
 ): Promise<TranscriptSegment[] | null> {
-  let dgUrl =
-    "https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&punctuate=true&diarize=true&utterances=true";
-  dgUrl += lang === "auto" ? "&detect_language=true" : `&language=${encodeURIComponent(lang)}`;
+  const dgUrl = `https://api.deepgram.com/v1/listen?${dgParams(lang)}&smart_format=true&punctuate=true&diarize=true&utterances=true`;
   const res = await fetch(dgUrl, {
     method: "POST",
-    headers: { Authorization: `Token ${key}`, "Content-Type": contentType },
-    body: blob,
+    headers: {
+      Authorization: `Token ${key}`,
+      "Content-Type": mediaUrl ? "application/json" : contentType,
+    },
+    body: mediaUrl ? JSON.stringify({ url: mediaUrl }) : blob!,
   });
   if (!res.ok) return null;
   const data = await res.json();

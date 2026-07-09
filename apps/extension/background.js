@@ -66,7 +66,6 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
           target: "offscreen", type: "OFF_START",
           streamId, opts: m.opts || {},
         });
-        chrome.storage.local.set({ recActive: true });
         sendResponse({ ok: true });
       } catch (e) {
         LOG("START error", e);
@@ -92,7 +91,6 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
   if (m.target === "bg") {
     (async () => {
       if (["RESULT", "SAVED", "FATAL", "STATUS", "DIAG"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
-      if (m.type === "SAVED" || m.type === "FATAL") chrome.storage.local.set({ recActive: false });
       // Recover the recording tab across service-worker restarts.
       let tid = recordingTabId;
       if (tid == null) { try { tid = (await chrome.storage.session.get("recordingTabId")).recordingTabId ?? null; } catch {} }

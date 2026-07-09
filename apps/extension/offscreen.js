@@ -1,36 +1,34 @@
-// Records audio and transcribes it LIVE in ~12s segments (each a complete,
-// independently-decodable webm), streaming partial lines to the on-page bar. A
-// second continuous recorder keeps one clean file for saving. On stop it
-// summarizes the accumulated transcript.
+// Records the call into ONE continuous file and transcribes it ONCE at stop.
+// Why: speaker diarization needs the whole conversation — 12-second segments
+// collapse every voice into "Speaker 1" and split words at chunk borders
+// (verified empirically against Deepgram). The full file goes to Supabase
+// storage first (it's saved for playback anyway), then /api/transcribe gets a
+// short-lived signed link — so request-size limits never apply.
 //
 // Sources are mixed through a single AudioContext destination:
 //   • tab audio (chrome.tabCapture)  — the other participants
 //   • your microphone (optional)     — your own voice (tab capture never has it)
+//
 // IMPORTANT: offscreen documents can NOT use chrome.storage (only
 // chrome.runtime messaging). The session token and all breadcrumbs go through
 // the background worker — never touch chrome.storage from this file.
-import { APP_URL, LOG, fetchT } from "./config.js";
+import { APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, LOG, fetchT } from "./config.js";
 import { saveOrQueue } from "./save.js";
-
-const CHUNK_MS = 12000;
 
 let audioCtx = null;
 let tabStream = null;
 let micStream = null;
-let recStream = null; // mixed stream both recorders read from
-let recA = null; // continuous → save file
-let partsA = [];
-let recB = null; // segmented → live transcript
-let partsB = [];
-let chunkTimer = null;
+let recStream = null; // mixed stream the recorder reads from
+let rec = null;
+let parts = [];
 let recording = false;
 let startedAt = 0;
 let durSec = 0;
-let live = []; // accumulated transcript lines
 let lastBlob = null;
 let lastResult = null;
+let uploaded = null; // { id, audio_path } once the audio is in storage
 let opts = {}; // { lang, template, customPrompt, mic, micOnly }
-let diag = {}; // per-session diagnostics for the "empty transcript" case
+let diag = {}; // per-session diagnostics (written to storage by the bg worker)
 
 chrome.runtime.onMessage.addListener((m) => {
   if (m.target !== "offscreen") return;
@@ -42,7 +40,7 @@ chrome.runtime.onMessage.addListener((m) => {
 const send = (p) => chrome.runtime.sendMessage({ target: "bg", ...p }).catch(() => {});
 // Breadcrumb that survives SW/offscreen death — the bg worker writes it to storage.
 const step = (s) => { LOG("step:", s); send({ type: "STEP", s }); };
-// Full diagnostic snapshot of the last recording — bg writes it; the popup shows it.
+// Full diagnostic snapshot of the last recording — bg persists it.
 function dumpDbg(result) { send({ type: "DBG", dbg: { ...diag, result, ts: Date.now() } }); }
 // Valid (auto-refreshed) session — fetched FROM THE BG WORKER (which has storage).
 // Never throws; null means signed out.
@@ -56,7 +54,10 @@ function stopTracks() {
 
 async function start(streamId, startOpts) {
   opts = startOpts || {};
-  diag = { streamId: !!streamId, tabTracks: 0, tabMuted: null, tabEnded: false, micOk: false, calls: 0, emptyBlobs: 0, noToken: false, segs: 0, okSegs: 0, lastStatus: 0, bytes: 0 };
+  uploaded = null;
+  lastBlob = null;
+  lastResult = null;
+  diag = { streamId: !!streamId, tabTracks: 0, tabMuted: null, tabEnded: false, micOk: false, bytes: 0 };
   LOG("offscreen start", { hasStream: !!streamId, mic: !!opts.mic, micOnly: !!opts.micOnly, lang: opts.lang });
   send({ type: "DIAG", text: `start hasStream=${!!streamId} mic=${!!opts.mic} micOnly=${!!opts.micOnly}` });
   try {
@@ -114,24 +115,23 @@ async function start(streamId, startOpts) {
       recStream = micStream;
     }
 
-    partsA = [];
-    recA = new MediaRecorder(recStream, { mimeType: "audio/webm" });
-    recA.ondataavailable = (e) => e.data.size && partsA.push(e.data);
-    recA.onstop = () => {
-      lastBlob = new Blob(partsA, { type: "audio/webm" });
+    parts = [];
+    rec = new MediaRecorder(recStream, { mimeType: "audio/webm" });
+    rec.ondataavailable = (e) => e.data.size && parts.push(e.data);
+    rec.onstop = () => {
+      lastBlob = new Blob(parts, { type: "audio/webm" });
       stopTracks();
       audioCtx?.close();
+      finalize();
     };
-    recA.start();
+    rec.start(1000); // gather data continuously; ONE blob at stop
+
+    recording = true;
+    startedAt = Date.now();
     const src = tabStream && micStream ? "tab+mic" : tabStream ? "tab" : "mic";
     LOG("offscreen: recording started", { src, ctx: audioCtx?.state });
     send({ type: "DIAG", text: `recording started src=${src} ctx=${audioCtx?.state}` });
     step("recording");
-
-    live = [];
-    recording = true;
-    startedAt = Date.now();
-    startSegment();
   } catch (e) {
     stopTracks();
     dumpDbg("start-error: " + String(e?.message || e));
@@ -139,124 +139,133 @@ async function start(streamId, startOpts) {
   }
 }
 
-function startSegment() {
-  if (!recording) return;
-  const base = elapsed();
-  partsB = [];
-  recB = new MediaRecorder(recStream, { mimeType: "audio/webm" });
-  recB.ondataavailable = (e) => e.data.size && partsB.push(e.data);
-  recB.onstop = async () => {
-    await transcribeSegment(new Blob(partsB, { type: "audio/webm" }), base);
-    if (recording) startSegment();
-    else finalize();
-  };
-  recB.start();
-  chunkTimer = setTimeout(() => {
-    if (recB && recB.state !== "inactive") recB.stop();
-  }, CHUNK_MS);
-}
-
-async function transcribeSegment(blob, base) {
-  diag.calls++;
-  if (!blob.size) { diag.emptyBlobs++; return; }
-  diag.rawBytes = (diag.rawBytes || 0) + blob.size; // captured audio, pre-auth
-  const s = await token();
-  if (!s?.access_token) { diag.noToken = true; return; }
-  try {
-    const lang = opts.lang || "auto";
-    const tr = await fetchT(`${APP_URL}/api/transcribe?dur=${CHUNK_MS / 1000}&lang=${encodeURIComponent(lang)}`, {
-      method: "POST",
-      headers: { "Content-Type": "audio/webm", Authorization: `Bearer ${s.access_token}` },
-      body: blob,
-    }, 20000);
-    const { lines = [] } = await tr.json();
-    diag.segs++; diag.lastStatus = tr.status; diag.bytes += blob.size;
-    if (lines.length) diag.okSegs++;
-    LOG("transcribe", tr.status, "→", lines.length, "line(s)", blob.size, "bytes");
-    send({ type: "DIAG", text: `transcribe ${tr.status} → ${lines.length} lines, ${blob.size}b` });
-    for (const l of lines) {
-      const line = { start: base + (l.start || 0), speaker: l.speaker || "Speaker", text: l.text };
-      if (!line.text) continue;
-      live.push(line);
-      send({ type: "PARTIAL", line });
-    }
-  } catch (e) {
-    diag.segs++;
-    LOG("transcribe error (segment dropped)", String(e?.message || e));
-    send({ type: "DIAG", text: `transcribe ERROR: ${String(e?.message || e)}` });
-  }
-}
-
 function stop() {
+  if (!recording) return;
   recording = false;
   step("stopping");
-  clearTimeout(chunkTimer);
-  if (recA && recA.state !== "inactive") recA.stop();
-  if (recB && recB.state !== "inactive") recB.stop();
+  if (rec && rec.state !== "inactive") rec.stop(); // onstop → finalize()
   else finalize();
 }
 
 async function finalize() {
   durSec = elapsed();
   step("finalizing");
-  LOG("finalize", { lines: live.length, durSec, diag });
-  send({ type: "DIAG", text: `finalize lines=${live.length} tabTracks=${diag.tabTracks} muted=${diag.tabMuted} ended=${diag.tabEnded} micOk=${diag.micOk} calls=${diag.calls} empty=${diag.emptyBlobs} noTok=${diag.noToken} segs=${diag.segs} status=${diag.lastStatus} bytes=${diag.bytes}` });
-  if (!live.length) {
-    let why;
-    if (!diag.tabTracks && !diag.micOk) why = "не было источника звука";
-    else if (diag.noToken) why = "нет сессии — выйди и зайди в расширении заново";
-    else if (diag.tabEnded) why = "трек вкладки оборвался (tabCapture отвалился)";
-    else if (!opts.micOnly && !diag.tabTracks) why = "звук вкладки не захватился (поток не сработал)";
-    else if (diag.calls === 0) why = "не набралось ни одного сегмента (слишком коротко?)";
-    else if (diag.emptyBlobs === diag.calls) why = "аудио пустое — трек вкладки без звука";
-    else if (diag.segs === 0) why = "не отправился ни один сегмент";
-    else if (diag.lastStatus === 401 || diag.lastStatus === 403) why = `авторизация транскрайба (${diag.lastStatus}) — перелогинься`;
-    else if (diag.lastStatus && diag.lastStatus !== 200) why = `транскрайб вернул ошибку ${diag.lastStatus}`;
-    else if (diag.bytes < 2000) why = "почти не было аудио (тишина во вкладке?)";
-    else why = "звук шёл, но речи не распознано (очень тихо/музыка?)";
-    step("fatal-empty:" + why);
-    dumpDbg("empty: " + why);
-    return send({ type: "FATAL", error: `Пусто — ${why}.` });
+  diag.bytes = lastBlob?.size || 0;
+  LOG("finalize", { bytes: diag.bytes, durSec });
+  if (!lastBlob?.size) {
+    dumpDbg("empty: аудио не записалось");
+    return send({ type: "FATAL", error: "Пусто — аудио не записалось. Проверь, что был звук." });
   }
   send({ type: "STATUS", text: "Обрабатываю…" });
-  dumpDbg("transcribed: " + live.length + " lines");
+
   const s = await token();
+  if (!s?.access_token || !s?.user?.id) {
+    dumpDbg("no session");
+    return send({ type: "FATAL", error: "Нет сессии — войди в расширении и попробуй снова." });
+  }
+
+  // 1) Upload the full recording to storage (it's kept for playback anyway),
+  //    then mint a short-lived signed link for the transcriber.
+  const id = crypto.randomUUID();
+  const audio_path = `${s.user.id}/${id}.webm`;
+  let mediaUrl = null;
   try {
+    step("uploading");
+    const up = await fetchT(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${audio_path}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}`, "Content-Type": "audio/webm" },
+      body: lastBlob,
+    }, 180000);
+    diag.upStatus = up.status;
+    LOG("audio upload", up.status);
+    if (up.ok) {
+      uploaded = { id, audio_path };
+      const sign = await fetchT(`${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${audio_path}`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresIn: 900 }),
+      }, 15000);
+      diag.signStatus = sign.status;
+      if (sign.ok) {
+        const d = await sign.json();
+        if (d?.signedURL) mediaUrl = `${SUPABASE_URL}/storage/v1${d.signedURL}`;
+      }
+    }
+  } catch (e) {
+    LOG("upload error", String(e?.message || e));
+  }
+
+  // 2) Transcribe the WHOLE file — full audio is what makes diarization and
+  //    language detection work. Falls back to a raw-body upload (small files).
+  let lines = [];
+  try {
+    step("transcribing");
+    const lang = encodeURIComponent(opts.lang || "auto");
+    const tr = mediaUrl
+      ? await fetchT(`${APP_URL}/api/transcribe?lang=${lang}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.access_token}` },
+          body: JSON.stringify({ url: mediaUrl }),
+        }, 240000)
+      : await fetchT(`${APP_URL}/api/transcribe?lang=${lang}`, {
+          method: "POST",
+          headers: { "Content-Type": "audio/webm", Authorization: `Bearer ${s.access_token}` },
+          body: lastBlob,
+        }, 240000);
+    diag.trStatus = tr.status;
+    const d = await tr.json();
+    lines = Array.isArray(d?.lines) ? d.lines : [];
+    LOG("transcribe", tr.status, "→", lines.length, "line(s)");
+    send({ type: "DIAG", text: `transcribe ${tr.status} → ${lines.length} lines` });
+  } catch (e) {
+    diag.trError = String(e?.message || e).slice(0, 120);
+    LOG("transcribe error", diag.trError);
+  }
+  diag.lines = lines.length;
+  if (!lines.length) {
+    dumpDbg("empty transcript");
+    return send({ type: "FATAL", error: "Не удалось расслышать речь — проверь, что был звук." });
+  }
+
+  // 3) Summarize.
+  try {
+    step("summarizing");
     const sm = await fetchT(`${APP_URL}/api/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.access_token}` },
       body: JSON.stringify({
-        transcript: live,
+        transcript: lines,
         durSec,
         template: opts.template || "auto",
         customPrompt: opts.customPrompt || "",
       }),
     }, 25000);
     const { summary } = await sm.json();
-    lastResult = { transcript: live, summary: summary || { tldr: "", keyPoints: [], nextSteps: [] } };
-    send({ type: "RESULT", transcript: lastResult.transcript, summary: lastResult.summary });
+    lastResult = { transcript: lines, summary: summary || { tldr: "", keyPoints: [], nextSteps: [] } };
   } catch {
-    lastResult = { transcript: live, summary: { tldr: "", keyPoints: [], nextSteps: [] } };
-    send({ type: "RESULT", transcript: live, summary: lastResult.summary });
+    lastResult = { transcript: lines, summary: { tldr: "", keyPoints: [], nextSteps: [] } };
   }
+  dumpDbg(`ok: ${lines.length} lines`);
+  send({ type: "RESULT", transcript: lastResult.transcript, summary: lastResult.summary });
 }
 
 async function save(title) {
   const s = await token();
   const uid = s?.user?.id;
-  LOG("save start", { hasToken: !!s?.access_token, uid: !!uid, hasResult: !!lastResult, hasBlob: !!lastBlob?.size });
+  LOG("save start", { hasToken: !!s?.access_token, uid: !!uid, hasResult: !!lastResult, uploaded: !!uploaded });
   if (!s?.access_token || !uid || !lastResult) return send({ type: "SAVED", ok: false, error: "Not ready." });
   const item = {
-    id: crypto.randomUUID(),
+    id: uploaded?.id || crypto.randomUUID(),
     user_id: uid,
     title: (title || "Tab recording").slice(0, 80),
     dur_sec: durSec,
     transcript: lastResult.transcript,
     summary: lastResult.summary,
-    blob: lastBlob?.size ? lastBlob : null,
+    // Audio is normally uploaded during finalize; keep the blob only if not.
+    audio_path: uploaded?.audio_path || null,
+    blob: uploaded ? null : lastBlob?.size ? lastBlob : null,
     createdAt: Date.now(),
   };
-  // Save now, or queue in IndexedDB and retry later — never lose a recording.
   step("saving");
   const r = await saveOrQueue(item, s);
   step(r.ok ? "saved" : r.queued ? "save-queued" : "save-failed:" + (r.error || ""));

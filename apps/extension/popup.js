@@ -244,41 +244,6 @@ $("micnote").addEventListener("click", () =>
   chrome.tabs.create({ url: chrome.runtime.getURL("permission.html") })
 );
 
-/* ---- diagnostic panel: last recording's full picture (just screenshot it) ---- */
-(async () => {
-  try {
-    const { dbg } = await chrome.storage.local.get("dbg");
-    if (!dbg || !dbg.ts || Date.now() - dbg.ts > 3600000) return;
-    const d = dbg;
-    const el = document.createElement("div");
-    el.style.cssText =
-      "margin:10px 13px 0;padding:9px 11px;border-radius:9px;background:rgba(255,180,84,.08);" +
-      "border:1px solid rgba(255,180,84,.25);font-size:10.5px;line-height:1.55;color:rgba(255,255,255,.72);" +
-      "font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word";
-    el.textContent =
-      "🩺 Диагностика последней записи\n" +
-      `streamId:${d.streamId ? "✓" : "✗"}  tab:${d.tabTracks ?? "?"}трек muted:${d.tabMuted} ended:${d.tabEnded}\n` +
-      `mic:${d.micOk ? "✓" : "✗"}  сегм:${d.calls ?? "?"} пустых:${d.emptyBlobs ?? "?"} строк:${d.segs ?? "?"} статус:${d.lastStatus ?? "?"}\n` +
-      `итог: ${d.result || "?"}`;
-    (popup.querySelector(".main") || popup).appendChild(el);
-  } catch {}
-})();
-
-/* ---- active recording: the popup is the stop button for mic-mode ---- */
-(async () => {
-  try {
-    const { recActive } = await chrome.storage.local.get("recActive");
-    if (!recActive) return;
-    const bar = $("recbar");
-    bar.hidden = false;
-    bar.addEventListener("click", async () => {
-      bar.querySelector("b").textContent = "останавливаю…";
-      await chrome.runtime.sendMessage({ type: "BAR_STOP" }).catch(() => {});
-      setTimeout(() => window.close(), 400);
-    });
-  } catch {}
-})();
-
 /* ---------- init ---------- */
 (async () => {
   session = await loadSession();
