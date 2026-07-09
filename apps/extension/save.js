@@ -2,7 +2,7 @@
 // server hiccup), queue it in IndexedDB and retry later — so a finished
 // recording is NEVER lost. flushPending() is called on browser start, when the
 // popup opens, and when a new recording begins.
-import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, LOG, getFreshSession } from "./config.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, LOG, getFreshSession, fetchT } from "./config.js";
 
 const DB_NAME = "tenet";
 const STORE = "pending";
@@ -57,7 +57,7 @@ export async function uploadMeeting(item, session) {
     // Upload audio only if we still have the blob and haven't uploaded before.
     if (!audio_path && item.blob?.size) {
       audio_path = `${item.user_id}/${item.id}.webm`;
-      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${audio_path}`, {
+      const up = await fetchT(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${audio_path}`, {
         method: "POST",
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -65,7 +65,7 @@ export async function uploadMeeting(item, session) {
           "Content-Type": "audio/webm",
         },
         body: item.blob,
-      });
+      }, 30000);
       LOG("save: audio upload", up.status);
       if (!up.ok) audio_path = null; // keep the row even if audio failed
     }
@@ -80,7 +80,7 @@ export async function uploadMeeting(item, session) {
       transcript: item.transcript,
       summary: item.summary,
     };
-    const ins = await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
+    const ins = await fetchT(`${SUPABASE_URL}/rest/v1/meetings`, {
       method: "POST",
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -89,7 +89,7 @@ export async function uploadMeeting(item, session) {
         Prefer: "return=minimal",
       },
       body: JSON.stringify(row),
-    });
+    }, 15000);
     LOG("save: meetings insert", ins.status);
     if (!ins.ok) return { ok: false, error: (await ins.text()).slice(0, 120) };
     return { ok: true };

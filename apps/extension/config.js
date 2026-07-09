@@ -11,6 +11,17 @@ export const BUCKET = "recordings";
 export const DEBUG = true;
 export const LOG = (...a) => { if (DEBUG) { try { console.log("[Tenet]", ...a); } catch {} } };
 
+// fetch with a hard timeout — no network call may hang the recorder forever.
+export async function fetchT(url, opts = {}, ms = 20000) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 // Returns a valid session, refreshing the access_token via the refresh_token
 // when it's within 5 min of expiry. Fixes recordings failing with 401 on
 // sessions older than ~1h. Falls back to the stored session if it can't refresh.
@@ -20,11 +31,11 @@ export async function getFreshSession() {
   const soon = session.expires_at && session.expires_at - Date.now() < 5 * 60 * 1000;
   if (!soon || !session.refresh_token) return session;
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    const res = await fetchT(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
       method: "POST",
       headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: session.refresh_token }),
-    });
+    }, 12000);
     if (!res.ok) return session;
     const d = await res.json();
     if (!d.access_token) return session;

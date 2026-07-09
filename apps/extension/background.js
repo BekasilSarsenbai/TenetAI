@@ -36,6 +36,7 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
       try {
         LOG("START_RECORDING", { tabId: m.tabId, hasStream: !!m.streamId, opts: m.opts });
         recordingTabId = m.tabId ?? null;
+        try { await chrome.storage.session.set({ recordingTabId }); } catch {}
         await ensureOffscreen();
         LOG("offscreen ready → OFF_START");
         await chrome.runtime.sendMessage({
@@ -64,26 +65,28 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
 
   // ----- from offscreen → relay to the bar in the recording tab -----
   if (m.target === "bg") {
-    if (["RESULT", "SAVED", "FATAL", "STATUS", "DIAG"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
-    // Auto-transition: open the finished note in the app the moment it saves
-    // (works even if the call tab was closed).
-    if (m.type === "SAVED" && m.ok && !m.queued && m.id && m.id !== lastOpened) {
-      lastOpened = m.id;
-      const url = `${APP_URL}/?n=${m.id}`;
-      // Redirect the meeting tab ITSELF to the finished note (the call tab
-      // becomes the site). If it was closed, fall back to a fresh tab.
-      const tid = recordingTabId;
-      const openFresh = () => chrome.tabs.create({ url, active: true }).catch(() => {});
-      if (tid != null) chrome.tabs.update(tid, { url, active: true }).catch(openFresh);
-      else openFresh();
-    }
-    if (recordingTabId == null) return;
-    const to = (payload) => chrome.tabs.sendMessage(recordingTabId, { target: "bar", ...payload }).catch(() => {});
-    if (m.type === "PARTIAL") to({ type: "PARTIAL", line: m.line });
-    if (m.type === "STATUS") to({ type: "STATUS", text: m.text });
-    if (m.type === "RESULT") to({ type: "RESULT", transcript: m.transcript, summary: m.summary });
-    if (m.type === "SAVED") to({ type: "SAVED", ok: m.ok, error: m.error });
-    if (m.type === "FATAL") to({ type: "FATAL", text: m.error });
+    (async () => {
+      if (["RESULT", "SAVED", "FATAL", "STATUS", "DIAG"].includes(m.type)) LOG("offscreen →", m.type, m.error || m.text || "");
+      // Recover the recording tab across service-worker restarts.
+      let tid = recordingTabId;
+      if (tid == null) { try { tid = (await chrome.storage.session.get("recordingTabId")).recordingTabId ?? null; } catch {} }
+      // Auto-transition: redirect the meeting tab to the finished note the moment
+      // it saves (survives an SW restart or a closed call tab).
+      if (m.type === "SAVED" && m.ok && !m.queued && m.id && m.id !== lastOpened) {
+        lastOpened = m.id;
+        const url = `${APP_URL}/?n=${m.id}`;
+        const openFresh = () => chrome.tabs.create({ url, active: true }).catch(() => {});
+        if (tid != null) chrome.tabs.update(tid, { url, active: true }).catch(openFresh);
+        else openFresh();
+      }
+      if (tid == null) return;
+      const to = (payload) => chrome.tabs.sendMessage(tid, { target: "bar", ...payload }).catch(() => {});
+      if (m.type === "PARTIAL") to({ type: "PARTIAL", line: m.line });
+      if (m.type === "STATUS") to({ type: "STATUS", text: m.text });
+      if (m.type === "RESULT") to({ type: "RESULT", transcript: m.transcript, summary: m.summary });
+      if (m.type === "SAVED") to({ type: "SAVED", ok: m.ok, error: m.error });
+      if (m.type === "FATAL") to({ type: "FATAL", text: m.error });
+    })();
     return;
   }
 });

@@ -6,7 +6,7 @@
 // Sources are mixed through a single AudioContext destination:
 //   • tab audio (chrome.tabCapture)  — the other participants
 //   • your microphone (optional)     — your own voice (tab capture never has it)
-import { APP_URL, LOG, getFreshSession } from "./config.js";
+import { APP_URL, LOG, getFreshSession, fetchT } from "./config.js";
 import { saveOrQueue } from "./save.js";
 
 const CHUNK_MS = 12000;
@@ -37,6 +37,8 @@ chrome.runtime.onMessage.addListener((m) => {
 });
 
 const send = (p) => chrome.runtime.sendMessage({ target: "bg", ...p }).catch(() => {});
+// Breadcrumb that survives SW/offscreen death — shows the last step reached.
+const step = (s) => { LOG("step:", s); try { chrome.storage.local.set({ lastStep: s, lastStepAt: Date.now() }); } catch {} };
 const token = getFreshSession; // valid (auto-refreshed) session
 const elapsed = () => Math.round((Date.now() - startedAt) / 1000);
 
@@ -116,6 +118,7 @@ async function start(streamId, startOpts) {
     const src = tabStream && micStream ? "tab+mic" : tabStream ? "tab" : "mic";
     LOG("offscreen: recording started", { src, ctx: audioCtx?.state });
     send({ type: "DIAG", text: `recording started src=${src} ctx=${audioCtx?.state}` });
+    step("recording");
 
     live = [];
     recording = true;
@@ -150,11 +153,11 @@ async function transcribeSegment(blob, base) {
   if (!s?.access_token) return;
   try {
     const lang = opts.lang || "auto";
-    const tr = await fetch(`${APP_URL}/api/transcribe?dur=${CHUNK_MS / 1000}&lang=${encodeURIComponent(lang)}`, {
+    const tr = await fetchT(`${APP_URL}/api/transcribe?dur=${CHUNK_MS / 1000}&lang=${encodeURIComponent(lang)}`, {
       method: "POST",
       headers: { "Content-Type": "audio/webm", Authorization: `Bearer ${s.access_token}` },
       body: blob,
-    });
+    }, 20000);
     const { lines = [] } = await tr.json();
     diag.segs++; diag.lastStatus = tr.status; diag.bytes += blob.size;
     if (lines.length) diag.okSegs++;
@@ -175,6 +178,7 @@ async function transcribeSegment(blob, base) {
 
 function stop() {
   recording = false;
+  step("stopping");
   clearTimeout(chunkTimer);
   if (recA && recA.state !== "inactive") recA.stop();
   if (recB && recB.state !== "inactive") recB.stop();
@@ -183,6 +187,7 @@ function stop() {
 
 async function finalize() {
   durSec = elapsed();
+  step("finalizing");
   LOG("finalize", { lines: live.length, durSec, diag });
   send({ type: "DIAG", text: `finalize lines=${live.length} tabTracks=${diag.tabTracks} muted=${diag.tabMuted} micOk=${diag.micOk} segs=${diag.segs} okSegs=${diag.okSegs} lastStatus=${diag.lastStatus} bytes=${diag.bytes}` });
   if (!live.length) {
@@ -194,12 +199,13 @@ async function finalize() {
     else if (diag.lastStatus && diag.lastStatus !== 200) why = `транскрайб вернул ошибку ${diag.lastStatus}`;
     else if (diag.bytes < 2000) why = "почти не было аудио (тишина во вкладке?)";
     else why = "звук шёл, но речи не распознано (очень тихо/музыка?)";
+    step("fatal-empty:" + why);
     return send({ type: "FATAL", error: `Пусто — ${why}.` });
   }
   send({ type: "STATUS", text: "Обрабатываю…" });
   const s = await token();
   try {
-    const sm = await fetch(`${APP_URL}/api/summarize`, {
+    const sm = await fetchT(`${APP_URL}/api/summarize`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.access_token}` },
       body: JSON.stringify({
@@ -208,7 +214,7 @@ async function finalize() {
         template: opts.template || "auto",
         customPrompt: opts.customPrompt || "",
       }),
-    });
+    }, 25000);
     const { summary } = await sm.json();
     lastResult = { transcript: live, summary: summary || { tldr: "", keyPoints: [], nextSteps: [] } };
     send({ type: "RESULT", transcript: lastResult.transcript, summary: lastResult.summary });
@@ -234,7 +240,9 @@ async function save(title) {
     createdAt: Date.now(),
   };
   // Save now, or queue in IndexedDB and retry later — never lose a recording.
+  step("saving");
   const r = await saveOrQueue(item);
+  step(r.ok ? "saved" : r.queued ? "save-queued" : "save-failed:" + (r.error || ""));
   if (r.queued) send({ type: "SAVED", ok: true, queued: true, id: item.id });
   else send({ type: "SAVED", ok: r.ok, id: item.id, error: r.error || "" });
 }

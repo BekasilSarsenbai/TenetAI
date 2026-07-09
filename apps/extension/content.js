@@ -66,9 +66,27 @@
     return m;
   }
 
+  // Watchdog: if processing never returns a terminal message (hung fetch, killed
+  // worker), don't hang the capsule forever — offer a way into the app.
+  let watchdog = null;
+  function armWatchdog() {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => {
+      if (bar.classList.contains("done")) return;
+      LOG("watchdog fired — no result in time");
+      bar.classList.add("done");
+      status("Долго обрабатывается — открой Tenet");
+      const open = $("open");
+      open.href = "https://app.tenet.blog";
+      open.classList.remove("hide");
+      setTimeout(destroy, 15000);
+    }, 75000);
+  }
+
   $("stop").onclick = (e) => {
     e.stopPropagation();
     status("Обрабатываю…");
+    armWatchdog();
     chrome.runtime.sendMessage({ type: "BAR_STOP" });
   };
 
@@ -96,13 +114,16 @@
     if (m.type === "STATUS") {
       if (bar.classList.contains("rec")) return;
       status(m.text || "Обрабатываю…");
+      armWatchdog();
     }
     if (m.type === "RESULT") {
       LOG("RESULT → saving");
       status("Сохраняю…");
+      armWatchdog();
       chrome.runtime.sendMessage({ type: "BAR_SAVE", title: document.title });
     }
     if (m.type === "SAVED") {
+      clearTimeout(watchdog);
       LOG("SAVED", m.ok, m.queued, m.error || "");
       if (m.ok && m.queued) {
         bar.classList.add("done");
@@ -119,7 +140,7 @@
         status("Не удалось сохранить: " + (m.error || ""));
       }
     }
-    if (m.type === "FATAL") { LOG("FATAL", m.text); status(m.text || "Ошибка записи"); }
+    if (m.type === "FATAL") { clearTimeout(watchdog); LOG("FATAL", m.text); status(m.text || "Ошибка записи"); }
   });
 
   // --- auto-stop when the meeting call ends (best-effort, per platform) ---
@@ -133,6 +154,7 @@
     ended = true;
     LOG("call ended:", reason, "→ auto-stop");
     status("Обрабатываю…");
+    armWatchdog();
     chrome.runtime.sendMessage({ type: "BAR_STOP" });
   }
   // Tab closed / navigated away entirely → the call is over.
@@ -159,6 +181,7 @@
   function destroy() {
     clearInterval(timer);
     clearInterval(endTimer);
+    clearTimeout(watchdog);
     host.remove();
     window.__tenetBar = false;
   }
