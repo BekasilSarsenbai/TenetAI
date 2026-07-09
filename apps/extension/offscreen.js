@@ -122,7 +122,8 @@ async function start(streamId, startOpts) {
     }
 
     parts = [];
-    rec = new MediaRecorder(recStream, { mimeType: "audio/webm" });
+    // 128kbps opus — clean input is half of clean STT output.
+    rec = new MediaRecorder(recStream, { mimeType: "audio/webm", audioBitsPerSecond: 128000 });
     rec.ondataavailable = (e) => e.data.size && parts.push(e.data);
     rec.onstop = () => {
       lastBlob = new Blob(parts, { type: "audio/webm" });
@@ -214,7 +215,8 @@ async function finalize() {
       ? await fetchT(`${APP_URL}/api/transcribe?lang=${lang}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.access_token}` },
-          body: JSON.stringify({ url: mediaUrl }),
+          // title feeds keyterm hints (names/brands the model shouldn't mangle)
+          body: JSON.stringify({ url: mediaUrl, title: opts.tabTitle || "" }),
         }, 240000)
       : await fetchT(`${APP_URL}/api/transcribe?lang=${lang}`, {
           method: "POST",

@@ -27,12 +27,14 @@ export async function POST(request: Request) {
   const reqType = request.headers.get("content-type") || "";
   let blob: Blob | null = null;
   let mediaUrl: string | null = null;
+  let title: string | null = null;
   if (reqType.includes("application/json")) {
     const j = await request.json().catch(() => null);
     const allowed = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     if (typeof j?.url === "string" && allowed && j.url.startsWith(`${allowed}/storage/`)) {
       mediaUrl = j.url;
     }
+    if (typeof j?.title === "string") title = j.title.slice(0, 120);
     if (!mediaUrl)
       return NextResponse.json({ error: "bad url" }, { status: 400, headers: CORS });
   } else {
@@ -41,15 +43,21 @@ export async function POST(request: Request) {
   const contentType = reqType && !reqType.includes("json") ? reqType : blob?.type || "audio/webm";
   const hasAudio = !!mediaUrl || (blob ? blob.size > 0 : false);
 
-  // Try whichever provider is configured, in priority order. Kazakh isn't on
-  // Deepgram's nova models — it falls through to Groq Whisper below.
-  if (process.env.DEEPGRAM_API_KEY && hasAudio) {
+  // Names/brands the model should not mangle (meeting title + recurring words
+  // from the user's recent notes) — fed to Deepgram as keyterms.
+  const keyterms = hasAudio ? await collectKeyterms(request, title) : [];
+
+  // Route to whichever provider handles this language best; languages Deepgram
+  // doesn't cover (kk, ar, fa, he, …) go straight to Groq Whisper.
+  let lines: TranscriptSegment[] | null = null;
+  let source = "";
+  if (process.env.DEEPGRAM_API_KEY && hasAudio && dgParams(lang)) {
     try {
-      const lines = await deepgram(blob, mediaUrl, contentType, process.env.DEEPGRAM_API_KEY, lang);
-      if (lines) return NextResponse.json({ lines, source: "deepgram" }, { headers: CORS });
+      lines = await deepgram(blob, mediaUrl, contentType, process.env.DEEPGRAM_API_KEY, lang, keyterms);
+      if (lines) source = "deepgram";
     } catch {}
   }
-  if (process.env.GROQ_API_KEY && hasAudio) {
+  if (!lines && process.env.GROQ_API_KEY && hasAudio) {
     try {
       // Groq needs bytes — pull them from storage when we only have the link.
       let gBlob = blob;
@@ -62,10 +70,16 @@ export async function POST(request: Request) {
         }
       }
       if (gBlob && gBlob.size > 0) {
-        const lines = await groqWhisper(gBlob, gType, process.env.GROQ_API_KEY, lang);
-        if (lines) return NextResponse.json({ lines, source: "groq" }, { headers: CORS });
+        lines = await groqWhisper(gBlob, gType, process.env.GROQ_API_KEY, lang);
+        if (lines) source = "groq";
       }
     } catch {}
+  }
+  if (lines) {
+    // Cheap LLM pass fixing obvious STT slips (broken numbers, garbled words).
+    // Fail-safe: any problem returns the original lines untouched.
+    lines = await polish(lines, process.env.GROQ_API_KEY);
+    return NextResponse.json({ lines, source }, { headers: CORS });
   }
 
   // A provider key is configured, so a real attempt was made above. Don't fake
@@ -75,21 +89,29 @@ export async function POST(request: Request) {
   }
 
   // No provider configured at all — showcase demo so the feature stays visible.
-  const lines: TranscriptSegment[] = DEMO_TRANSCRIPT_TEXT.map((s, i) => ({
+  const demoLines: TranscriptSegment[] = DEMO_TRANSCRIPT_TEXT.map((s, i) => ({
     start: Math.round((i / DEMO_TRANSCRIPT_TEXT.length) * dur),
     speaker: s.speaker,
     text: s.text,
   }));
-  return NextResponse.json({ lines, source: "demo" }, { headers: CORS });
+  return NextResponse.json({ lines: demoLines, source: "demo" }, { headers: CORS });
 }
 
-// Deepgram model choice, empirically tested (see repo history):
-// nova-3 language=multi transcribes Russian noticeably better than nova-2
-// detect_language ("Бекасыл" vs "Бекасл") and handles RU/EN code-switching.
-function dgParams(lang: string): string {
+// Per-language routing, empirically tested (see repo history):
+// - nova-3 language=multi is the best for its 10 languages (incl. Russian:
+//   "Бекасыл" vs nova-2's "Бекасл") and handles code-switching (RU/EN mixes).
+// - nova-2 covers many more languages than nova-3.
+// - Languages Deepgram lacks (kk, ar, fa, he, …) return null → Groq Whisper.
+const NOVA3_MULTI = new Set(["ru", "es", "fr", "de", "hi", "pt", "ja", "it", "nl"]);
+const NOVA2_LANGS = new Set([
+  "uk", "tr", "pl", "ko", "zh", "sv", "da", "no", "cs", "el", "fi", "hu",
+  "ro", "sk", "bg", "id", "ms", "th", "vi", "ca", "et", "lv", "lt",
+]);
+function dgParams(lang: string): string | null {
   if (lang === "en") return "model=nova-3&language=en";
-  if (lang === "auto" || lang === "ru") return "model=nova-3&language=multi";
-  return `model=nova-2&language=${encodeURIComponent(lang)}`;
+  if (lang === "auto" || NOVA3_MULTI.has(lang)) return "model=nova-3&language=multi";
+  if (NOVA2_LANGS.has(lang)) return `model=nova-2&language=${encodeURIComponent(lang)}`;
+  return null;
 }
 
 // Deepgram — with diarization (real speaker labels). Accepts raw bytes or a
@@ -99,9 +121,18 @@ async function deepgram(
   mediaUrl: string | null,
   contentType: string,
   key: string,
-  lang: string
+  lang: string,
+  keyterms: string[] = []
 ): Promise<TranscriptSegment[] | null> {
-  const dgUrl = `https://api.deepgram.com/v1/listen?${dgParams(lang)}&smart_format=true&punctuate=true&diarize=true&utterances=true`;
+  const params = dgParams(lang);
+  if (!params) return null;
+  // Vocabulary hints — nova-3 takes `keyterm`, nova-2 takes boosted `keywords`.
+  // Empirically turns "Супаби и Дипгром" into "Supabase и Deepgram".
+  const kt = keyterms
+    .slice(0, 12)
+    .map((t) => (params.includes("nova-3") ? `&keyterm=${encodeURIComponent(t)}` : `&keywords=${encodeURIComponent(t)}:2`))
+    .join("");
+  const dgUrl = `https://api.deepgram.com/v1/listen?${params}${kt}&smart_format=true&punctuate=true&diarize=true&utterances=true`;
   const res = await fetch(dgUrl, {
     method: "POST",
     headers: {
@@ -150,6 +181,85 @@ async function groqWhisper(
     .map((s) => ({ start: Math.round(s.start), speaker: "Speaker", text: (s.text || "").trim() }))
     .filter((l) => l.text);
   return lines.length ? lines : null;
+}
+
+// Words STT models most often mangle: names and brands. Harvest them from the
+// meeting title and the user's recent note titles (their recurring vocabulary).
+const STOP_WORDS = new Set([
+  "meet", "google", "zoom", "teams", "call", "meeting", "session", "live",
+  "recording", "запись", "встреча", "созвон", "звонок", "новая", "new", "tab",
+]);
+async function collectKeyterms(request: Request, title: string | null): Promise<string[]> {
+  const terms = new Set<string>();
+  const harvest = (s?: string | null) => {
+    for (const w of (s || "").split(/[^\p{L}\p{N}'-]+/u)) {
+      if (w.length < 3 || w.length > 24) continue;
+      if (!/^[A-ZА-ЯЁӘҒҚҢӨҰҮІ]/u.test(w)) continue; // capitalized = likely a name/brand
+      if (STOP_WORDS.has(w.toLowerCase())) continue;
+      terms.add(w);
+    }
+  };
+  harvest(title);
+  try {
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const auth = request.headers.get("authorization") || "";
+    if (base && anon && auth) {
+      const r = await fetch(`${base}/rest/v1/meetings?select=title&order=created_at.desc&limit=12`, {
+        headers: { apikey: anon, Authorization: auth },
+      });
+      if (r.ok) for (const row of (await r.json()) as { title?: string }[]) harvest(row?.title);
+    }
+  } catch {}
+  return [...terms].slice(0, 12);
+}
+
+// LLM cleanup of raw STT output — fixes garbled words, broken numbers
+// ("800 1000 тенге" → "800 000 тенге") and punctuation, never rewrites
+// content. Fail-safe: any problem returns the original lines.
+const POLISH_SYS =
+  'You clean up raw speech-to-text lines. Fix ONLY obvious transcription mistakes: garbled words, wrong word boundaries, broken numbers, punctuation, capitalization. Keep each line in its original language. Never add, remove, translate, reorder or paraphrase content. If a line is fine, return it unchanged. Reply with JSON exactly like {"lines":[{"i":0,"t":"corrected text"}]} — one item per input line with the same "i".';
+async function polish(lines: TranscriptSegment[], key?: string): Promise<TranscriptSegment[]> {
+  if (!key || !lines.length) return lines;
+  try {
+    // chunk long transcripts so each call stays small and fast
+    const chunks: { i: number; t: string }[][] = [];
+    let cur: { i: number; t: string }[] = [];
+    let size = 0;
+    lines.forEach((l, i) => {
+      cur.push({ i, t: l.text });
+      size += l.text.length;
+      if (size > 6000) { chunks.push(cur); cur = []; size = 0; }
+    });
+    if (cur.length) chunks.push(cur);
+
+    const fixed = new Map<number, string>();
+    for (const chunk of chunks) {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: process.env.GROQ_POLISH_MODEL || "llama-3.3-70b-versatile",
+          temperature: 0,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: POLISH_SYS },
+            { role: "user", content: JSON.stringify({ lines: chunk }) },
+          ],
+        }),
+      });
+      if (!res.ok) return lines;
+      const data = await res.json();
+      const parsed = JSON.parse(data?.choices?.[0]?.message?.content || "{}");
+      for (const it of parsed?.lines || []) {
+        if (typeof it?.i === "number" && typeof it?.t === "string" && it.t.trim()) fixed.set(it.i, it.t.trim());
+      }
+    }
+    if (!fixed.size) return lines;
+    return lines.map((l, i) => (fixed.has(i) ? { ...l, text: fixed.get(i)! } : l));
+  } catch {
+    return lines;
+  }
 }
 
 function extFor(ct: string): string {
