@@ -27,8 +27,11 @@ let durSec = 0;
 let lastBlob = null;
 let lastResult = null;
 let uploaded = null; // { id, audio_path } once the audio is in storage
-let opts = {}; // { lang, template, customPrompt, mic, micOnly }
+let opts = {}; // { lang, template, customPrompt, mic, micOnly, tabTitle }
 let diag = {}; // per-session diagnostics (written to storage by the bg worker)
+let saving = false;
+let savedOnce = false;
+let capTimer = null; // safety cap so a forgotten recording can't run forever
 
 chrome.runtime.onMessage.addListener((m) => {
   if (m.target !== "offscreen") return;
@@ -53,10 +56,13 @@ function stopTracks() {
 }
 
 async function start(streamId, startOpts) {
+  if (recording) { LOG("already recording — start ignored"); return send({ type: "DIAG", text: "start ignored: already recording" }); }
   opts = startOpts || {};
   uploaded = null;
   lastBlob = null;
   lastResult = null;
+  saving = false;
+  savedOnce = false;
   diag = { streamId: !!streamId, tabTracks: 0, tabMuted: null, tabEnded: false, micOk: false, bytes: 0 };
   LOG("offscreen start", { hasStream: !!streamId, mic: !!opts.mic, micOnly: !!opts.micOnly, lang: opts.lang });
   send({ type: "DIAG", text: `start hasStream=${!!streamId} mic=${!!opts.mic} micOnly=${!!opts.micOnly}` });
@@ -128,6 +134,8 @@ async function start(streamId, startOpts) {
 
     recording = true;
     startedAt = Date.now();
+    clearTimeout(capTimer);
+    capTimer = setTimeout(() => { if (recording) { LOG("safety cap: 3h — stopping"); stop(); } }, 3 * 3600 * 1000);
     const src = tabStream && micStream ? "tab+mic" : tabStream ? "tab" : "mic";
     LOG("offscreen: recording started", { src, ctx: audioCtx?.state });
     send({ type: "DIAG", text: `recording started src=${src} ctx=${audioCtx?.state}` });
@@ -142,6 +150,7 @@ async function start(streamId, startOpts) {
 function stop() {
   if (!recording) return;
   recording = false;
+  clearTimeout(capTimer);
   step("stopping");
   if (rec && rec.state !== "inactive") rec.stop(); // onstop → finalize()
   else finalize();
@@ -224,7 +233,13 @@ async function finalize() {
   diag.lines = lines.length;
   if (!lines.length) {
     dumpDbg("empty transcript");
-    return send({ type: "FATAL", error: "Не удалось расслышать речь — проверь, что был звук." });
+    const why =
+      diag.trStatus === 401 || diag.trStatus === 403
+        ? "Сессия истекла — открой расширение и войди заново."
+        : diag.trStatus && diag.trStatus !== 200
+          ? `Сервер не ответил (${diag.trStatus}) — попробуй ещё раз.`
+          : "Не удалось расслышать речь — проверь, что был звук.";
+    return send({ type: "FATAL", error: why });
   }
 
   // 3) Summarize.
@@ -247,13 +262,21 @@ async function finalize() {
   }
   dumpDbg(`ok: ${lines.length} lines`);
   send({ type: "RESULT", transcript: lastResult.transcript, summary: lastResult.summary });
+  // Save AUTONOMOUSLY — never depend on the on-page bar (the call tab is often
+  // closed right after hanging up, and then nobody would trigger the save).
+  save(opts.tabTitle || "");
 }
 
 async function save(title) {
+  if (saving || savedOnce) return; // BAR_SAVE may arrive too — first one wins
+  saving = true;
   const s = await token();
   const uid = s?.user?.id;
   LOG("save start", { hasToken: !!s?.access_token, uid: !!uid, hasResult: !!lastResult, uploaded: !!uploaded });
-  if (!s?.access_token || !uid || !lastResult) return send({ type: "SAVED", ok: false, error: "Not ready." });
+  if (!s?.access_token || !uid || !lastResult) {
+    saving = false;
+    return send({ type: "SAVED", ok: false, error: "Not ready." });
+  }
   const item = {
     id: uploaded?.id || crypto.randomUUID(),
     user_id: uid,
@@ -268,6 +291,8 @@ async function save(title) {
   };
   step("saving");
   const r = await saveOrQueue(item, s);
+  savedOnce = r.ok || r.queued;
+  saving = false;
   step(r.ok ? "saved" : r.queued ? "save-queued" : "save-failed:" + (r.error || ""));
   if (r.queued) send({ type: "SAVED", ok: true, queued: true, id: item.id });
   else send({ type: "SAVED", ok: r.ok, id: item.id, error: r.error || "" });

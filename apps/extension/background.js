@@ -94,14 +94,11 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
       // Recover the recording tab across service-worker restarts.
       let tid = recordingTabId;
       if (tid == null) { try { tid = (await chrome.storage.session.get("recordingTabId")).recordingTabId ?? null; } catch {} }
-      // Auto-transition: redirect the meeting tab to the finished note the moment
-      // it saves (survives an SW restart or a closed call tab).
+      // Auto-transition: the moment the note saves, open it in a NEW tab and
+      // bring the user there (works even if the call tab was closed).
       if (m.type === "SAVED" && m.ok && !m.queued && m.id && m.id !== lastOpened) {
         lastOpened = m.id;
-        const url = `${APP_URL}/?n=${m.id}`;
-        const openFresh = () => chrome.tabs.create({ url, active: true }).catch(() => {});
-        if (tid != null) chrome.tabs.update(tid, { url, active: true }).catch(openFresh);
-        else openFresh();
+        chrome.tabs.create({ url: `${APP_URL}/?n=${m.id}`, active: true }).catch(() => {});
       }
       if (tid == null) return;
       const to = (payload) => chrome.tabs.sendMessage(tid, { target: "bar", ...payload }).catch(() => {});

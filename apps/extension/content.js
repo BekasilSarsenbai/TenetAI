@@ -122,10 +122,10 @@
       armWatchdog();
     }
     if (m.type === "RESULT") {
-      LOG("RESULT → saving");
+      // Saving happens autonomously in the recorder — the bar just shows it.
+      LOG("RESULT");
       status("Сохраняю…");
       armWatchdog();
-      chrome.runtime.sendMessage({ type: "BAR_SAVE", title: document.title });
     }
     if (m.type === "SAVED") {
       clearTimeout(watchdog);

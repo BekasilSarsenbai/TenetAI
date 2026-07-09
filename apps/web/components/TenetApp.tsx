@@ -84,16 +84,50 @@ export function TenetApp({ user }: { user: AppUser }) {
   }, [persist]);
 
   // Deep-link from the extension: ?n=<id> opens that note as soon as it loads.
+  // The row can land moments after this tab opens — refetch a few times.
+  const pendingNote = useRef<string | null>(null);
+  const pendingTries = useRef(0);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const id = new URLSearchParams(window.location.search).get("n");
+    if (id) pendingNote.current = id;
+  }, []);
+  useEffect(() => {
+    const id = pendingNote.current;
     if (!id) return;
     if (meetings.some((m) => m.id === id)) {
+      pendingNote.current = null;
       setActiveId(id);
       setView("note");
       window.history.replaceState(null, "", window.location.pathname);
+    } else if (persist && pendingTries.current < 5) {
+      pendingTries.current += 1;
+      const t = setTimeout(() => listMeetings().then(mergeMeetings), 1300);
+      return () => clearTimeout(t);
     }
-  }, [meetings]);
+  }, [meetings, persist]);
+
+  // Replace with fresh DB rows but keep local-only notes (unsaved fallbacks,
+  // ids start with "new") so a refetch can't wipe a user's work.
+  function mergeMeetings(rows: Meeting[]) {
+    setMeetings((prev) => [...prev.filter((m) => m.id.startsWith("new")), ...rows]);
+  }
+
+  // The extension saves meetings while this tab sits open in the background —
+  // refresh the list whenever the user comes back to the app.
+  useEffect(() => {
+    if (!persist) return;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      listMeetings().then(mergeMeetings);
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [persist]);
 
   function showToast(t: string) {
     setToast(t);

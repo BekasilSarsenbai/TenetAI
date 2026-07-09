@@ -182,7 +182,7 @@ startBtn.addEventListener("click", async () => {
     const resp = await chrome.runtime.sendMessage({
       type: "START_RECORDING",
       tabId,
-      opts: { lang, template, customPrompt, mic: micOn, micOnly },
+      opts: { lang, template, customPrompt, mic: micOn, micOnly, tabTitle: activeTab?.title || "" },
     });
     LOG("popup: bg response", resp);
     if (resp?.ok) { window.close(); return; }
