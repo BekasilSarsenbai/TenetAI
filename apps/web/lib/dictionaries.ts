@@ -32,9 +32,6 @@ const en = {
     perSeat: "/seat",
     billedAnnually: "billed annually",
     founding: "Founding offer — first 100 users keep Pro at $8/mo, forever.",
-    earlyAccess: "Free while we're in early access — Pro and Team are coming soon.",
-    comingSoon: "Coming soon",
-    soon: "Soon",
     plans: {
       free: {
         name: "Free",
@@ -317,9 +314,6 @@ const ru: Dict = {
     perSeat: "/место",
     billedAnnually: "при оплате за год",
     founding: "Оффер для первых — первые 100 пользователей сохраняют Pro за $8/мес навсегда.",
-    earlyAccess: "Сейчас всё бесплатно — Pro и Team скоро.",
-    comingSoon: "Скоро",
-    soon: "Скоро",
     plans: {
       free: {
         name: "Free",
