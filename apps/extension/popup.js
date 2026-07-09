@@ -163,10 +163,10 @@ startBtn.addEventListener("click", async () => {
 
   const micOnly = popup.dataset.state === "micmode";
   try {
-    // Everything that needs the user gesture / activeTab happens HERE, inside
-    // the click — that's what makes tabCapture + injection reliable. background
-    // just wires up the offscreen recorder afterwards.
-    let tabId = null, streamId = null;
+    // Inject the on-page bar here (needs the click's activeTab). The tab-audio
+    // stream is grabbed in the background worker, NOT here — a popup-issued
+    // stream id can die when the popup closes, yielding a silent/dead track.
+    let tabId = null;
     if (!micOnly) {
       const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       if (!tab) throw new Error("Нет активной вкладки.");
@@ -174,18 +174,14 @@ startBtn.addEventListener("click", async () => {
         throw new Error("На служебной странице Chrome записать нельзя — открой вкладку встречи (Meet/Zoom) или любой сайт.");
       }
       tabId = tab.id;
-      LOG("popup: capture tab", tabId, tab.url);
-      // Tab audio (the other participants) — grabbed inside the gesture.
-      streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
-      LOG("popup: streamId", streamId ? "ok" : "NULL");
-      // Inject the on-page recording bar.
+      LOG("popup: tab", tabId, tab.url);
       await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
       LOG("popup: bar injected");
     }
 
     const resp = await chrome.runtime.sendMessage({
       type: "START_RECORDING",
-      tabId, streamId,
+      tabId,
       opts: { lang, template, customPrompt, mic: micOn, micOnly },
     });
     LOG("popup: bg response", resp);

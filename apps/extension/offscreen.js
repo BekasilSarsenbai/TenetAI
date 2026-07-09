@@ -49,7 +49,7 @@ function stopTracks() {
 
 async function start(streamId, startOpts) {
   opts = startOpts || {};
-  diag = { tabTracks: 0, tabMuted: null, micOk: false, segs: 0, okSegs: 0, lastStatus: 0, bytes: 0 };
+  diag = { tabTracks: 0, tabMuted: null, tabEnded: false, micOk: false, calls: 0, emptyBlobs: 0, noToken: false, segs: 0, okSegs: 0, lastStatus: 0, bytes: 0 };
   LOG("offscreen start", { hasStream: !!streamId, mic: !!opts.mic, micOnly: !!opts.micOnly, lang: opts.lang });
   send({ type: "DIAG", text: `start hasStream=${!!streamId} mic=${!!opts.mic} micOnly=${!!opts.micOnly}` });
   try {
@@ -62,6 +62,7 @@ async function start(streamId, startOpts) {
       diag.tabMuted = tt ? tt.muted : null;
       LOG("offscreen: tab audio", diag.tabTracks, "track(s)", tt ? `muted=${tt.muted} state=${tt.readyState}` : "");
       send({ type: "DIAG", text: `tab audio ${diag.tabTracks} track(s) muted=${tt?.muted} state=${tt?.readyState}` });
+      if (tt) tt.addEventListener("ended", () => { diag.tabEnded = true; LOG("offscreen: tab track ENDED"); });
     }
 
     if (opts.mic) {
@@ -148,9 +149,10 @@ function startSegment() {
 }
 
 async function transcribeSegment(blob, base) {
-  if (!blob.size) return;
+  diag.calls++;
+  if (!blob.size) { diag.emptyBlobs++; return; }
   const s = await token();
-  if (!s?.access_token) return;
+  if (!s?.access_token) { diag.noToken = true; return; }
   try {
     const lang = opts.lang || "auto";
     const tr = await fetchT(`${APP_URL}/api/transcribe?dur=${CHUNK_MS / 1000}&lang=${encodeURIComponent(lang)}`, {
@@ -189,11 +191,15 @@ async function finalize() {
   durSec = elapsed();
   step("finalizing");
   LOG("finalize", { lines: live.length, durSec, diag });
-  send({ type: "DIAG", text: `finalize lines=${live.length} tabTracks=${diag.tabTracks} muted=${diag.tabMuted} micOk=${diag.micOk} segs=${diag.segs} okSegs=${diag.okSegs} lastStatus=${diag.lastStatus} bytes=${diag.bytes}` });
+  send({ type: "DIAG", text: `finalize lines=${live.length} tabTracks=${diag.tabTracks} muted=${diag.tabMuted} ended=${diag.tabEnded} micOk=${diag.micOk} calls=${diag.calls} empty=${diag.emptyBlobs} noTok=${diag.noToken} segs=${diag.segs} status=${diag.lastStatus} bytes=${diag.bytes}` });
   if (!live.length) {
     let why;
     if (!diag.tabTracks && !diag.micOk) why = "не было источника звука";
+    else if (diag.noToken) why = "нет сессии — выйди и зайди в расширении заново";
+    else if (diag.tabEnded) why = "трек вкладки оборвался (tabCapture отвалился)";
     else if (!opts.micOnly && !diag.tabTracks) why = "звук вкладки не захватился (поток не сработал)";
+    else if (diag.calls === 0) why = "не набралось ни одного сегмента (слишком коротко?)";
+    else if (diag.emptyBlobs === diag.calls) why = "аудио пустое — трек вкладки без звука";
     else if (diag.segs === 0) why = "не отправился ни один сегмент";
     else if (diag.lastStatus === 401 || diag.lastStatus === 403) why = `авторизация транскрайба (${diag.lastStatus}) — перелогинься`;
     else if (diag.lastStatus && diag.lastStatus !== 200) why = `транскрайб вернул ошибку ${diag.lastStatus}`;

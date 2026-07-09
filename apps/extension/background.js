@@ -34,14 +34,22 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
   if (m.type === "START_RECORDING") {
     (async () => {
       try {
-        LOG("START_RECORDING", { tabId: m.tabId, hasStream: !!m.streamId, opts: m.opts });
+        LOG("START_RECORDING", { tabId: m.tabId, opts: m.opts });
         recordingTabId = m.tabId ?? null;
         try { await chrome.storage.session.set({ recordingTabId }); } catch {}
+        // Grab the tab-audio stream id HERE, in the long-lived worker, right
+        // before the offscreen consumes it. A popup-issued id can die when the
+        // popup closes → a silent/dead track. micOnly skips tab audio.
+        let streamId = null;
+        if (m.tabId != null && !m.opts?.micOnly) {
+          streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: m.tabId });
+          LOG("streamId", streamId ? "ok" : "NULL");
+        }
         await ensureOffscreen();
         LOG("offscreen ready → OFF_START");
         await chrome.runtime.sendMessage({
           target: "offscreen", type: "OFF_START",
-          streamId: m.streamId || null, opts: m.opts || {},
+          streamId, opts: m.opts || {},
         });
         sendResponse({ ok: true });
       } catch (e) {
