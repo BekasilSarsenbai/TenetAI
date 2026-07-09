@@ -39,6 +39,9 @@ chrome.runtime.onMessage.addListener((m) => {
 const send = (p) => chrome.runtime.sendMessage({ target: "bg", ...p }).catch(() => {});
 // Breadcrumb that survives SW/offscreen death — shows the last step reached.
 const step = (s) => { LOG("step:", s); try { chrome.storage.local.set({ lastStep: s, lastStepAt: Date.now() }); } catch {} };
+// Full diagnostic snapshot of the last recording — surfaced in the popup so ONE
+// screenshot gives complete ground truth (no devtools needed).
+function dumpDbg(result) { try { chrome.storage.local.set({ dbg: { ...diag, result, ts: Date.now() } }); } catch {} }
 const token = getFreshSession; // valid (auto-refreshed) session
 const elapsed = () => Math.round((Date.now() - startedAt) / 1000);
 
@@ -49,7 +52,7 @@ function stopTracks() {
 
 async function start(streamId, startOpts) {
   opts = startOpts || {};
-  diag = { tabTracks: 0, tabMuted: null, tabEnded: false, micOk: false, calls: 0, emptyBlobs: 0, noToken: false, segs: 0, okSegs: 0, lastStatus: 0, bytes: 0 };
+  diag = { streamId: !!streamId, tabTracks: 0, tabMuted: null, tabEnded: false, micOk: false, calls: 0, emptyBlobs: 0, noToken: false, segs: 0, okSegs: 0, lastStatus: 0, bytes: 0 };
   LOG("offscreen start", { hasStream: !!streamId, mic: !!opts.mic, micOnly: !!opts.micOnly, lang: opts.lang });
   send({ type: "DIAG", text: `start hasStream=${!!streamId} mic=${!!opts.mic} micOnly=${!!opts.micOnly}` });
   try {
@@ -127,6 +130,7 @@ async function start(streamId, startOpts) {
     startSegment();
   } catch (e) {
     stopTracks();
+    dumpDbg("start-error: " + String(e?.message || e));
     send({ type: "FATAL", error: String(e?.message || e) });
   }
 }
@@ -206,9 +210,11 @@ async function finalize() {
     else if (diag.bytes < 2000) why = "почти не было аудио (тишина во вкладке?)";
     else why = "звук шёл, но речи не распознано (очень тихо/музыка?)";
     step("fatal-empty:" + why);
+    dumpDbg("empty: " + why);
     return send({ type: "FATAL", error: `Пусто — ${why}.` });
   }
   send({ type: "STATUS", text: "Обрабатываю…" });
+  dumpDbg("transcribed: " + live.length + " lines");
   const s = await token();
   try {
     const sm = await fetchT(`${APP_URL}/api/summarize`, {

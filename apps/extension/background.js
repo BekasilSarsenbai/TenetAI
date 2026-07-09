@@ -54,6 +54,7 @@ chrome.runtime.onMessage.addListener((m, _sender, sendResponse) => {
         sendResponse({ ok: true });
       } catch (e) {
         LOG("START error", e);
+        try { await chrome.storage.local.set({ dbg: { result: "bg-error: " + String(e?.message || e), streamId: false, ts: Date.now() } }); } catch {}
         sendResponse({ ok: false, error: String(e?.message || e) });
       }
     })();
