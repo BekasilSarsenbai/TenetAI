@@ -416,3 +416,14 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 @media(max-width:980px){.note-right{width:42%;min-width:300px}.dock-ask{width:280px}}
 @media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}.actions{grid-template-columns:1fr}.note-right{display:none}.note-left{border-right:0}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- live chooser: extension vs mic-only ---- */
+.lask-wrap{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:grid;place-items:center;backdrop-filter:blur(3px)}
+.lask{width:min(430px,92vw);background:var(--raise);border:1px solid var(--line-2);border-radius:16px;padding:22px;box-shadow:0 30px 80px -20px #000}
+.lask h4{font-size:16.5px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.lask p{font-size:13.5px;color:var(--soft);line-height:1.55;margin-bottom:16px}
+.lask p b{color:var(--ink)}
+.lask-main{display:block;text-align:center;background:var(--amber);color:#111;border-radius:11px;padding:12px;font-size:13.5px;font-weight:700;text-decoration:none;transition:filter .15s}
+.lask-main:hover{filter:brightness(1.07)}
+.lask-alt{display:block;width:100%;margin-top:9px;background:transparent;border:1px solid var(--line-2);border-radius:11px;padding:11px;color:var(--soft);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.lask-alt:hover{color:var(--ink);background:rgba(255,255,255,.04)}

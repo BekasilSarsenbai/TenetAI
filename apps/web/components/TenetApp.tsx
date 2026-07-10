@@ -15,7 +15,7 @@ import {
 } from "@/lib/meetings";
 import { Sidebar } from "./Sidebar";
 import { InstallBanner } from "./InstallBanner";
-import { SHOW_EXTENSION_PROMPT } from "@/lib/links";
+import { CHROME_STORE_URL, SHOW_EXTENSION_PROMPT } from "@/lib/links";
 import { HomeView } from "./HomeView";
 import { NoteView } from "./NoteView";
 import { LiveView } from "./LiveView";
@@ -53,6 +53,7 @@ export function TenetApp({ user }: { user: AppUser }) {
   const [view, setView] = useState<View>("home");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [liveAsk, setLiveAsk] = useState(false);
   const [proc, setProc] = useState<StepState[] | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -208,7 +209,9 @@ export function TenetApp({ user }: { user: AppUser }) {
 
   function doAct(act: SessionAct) {
     setModalOpen(false);
-    if (act === "live") goLive();
+    // Recording a call? The extension captures the OTHER participants too —
+    // offer it first; mic-only stays one click away.
+    if (act === "live") setLiveAsk(true);
     else if (act === "upload") fileRef.current?.click();
     else showToast("Paste-link capture is coming soon — try Upload or Live.");
   }
@@ -457,6 +460,36 @@ export function TenetApp({ user }: { user: AppUser }) {
             />
           )}
           <LiveView show={view === "live"} onEnd={endLive} onFinish={finishLive} />
+
+          {liveAsk && (
+            <div className="lask-wrap" onClick={() => setLiveAsk(false)}>
+              <div className="lask" onClick={(e) => e.stopPropagation()}>
+                <h4>Recording an online call?</h4>
+                <p>
+                  The Tenet Chrome extension records <b>everyone on the call</b> (tab audio + your
+                  mic) with speaker labels. Recording here uses only your microphone.
+                </p>
+                <a
+                  className="lask-main"
+                  href={CHROME_STORE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setLiveAsk(false)}
+                >
+                  Get the extension — record the whole call
+                </a>
+                <button
+                  className="lask-alt"
+                  onClick={() => {
+                    setLiveAsk(false);
+                    goLive();
+                  }}
+                >
+                  Continue here with microphone only
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
