@@ -3,8 +3,10 @@
 
 :root{
   --bg:#0B0B0D; --side:#0E0E11; --raise:#17171B; --card:#17171B; --hover:#1E1E23;
-  --ink:#F3F3F4; --soft:#B8B8BE; --muted:#7A7A82; --faint:#48484F;
-  --line:rgba(255,255,255,.06); --line-2:rgba(255,255,255,.11);
+  /* Text ramp tuned for WCAG on #0B0B0D: ink 15.6:1, soft ~10.5:1,
+     muted ~6.9:1, faint ~4.4:1 (was 2.1:1 — unreadable on dim screens). */
+  --ink:#F3F3F4; --soft:#C7C7CE; --muted:#9B9BA4; --faint:#787882;
+  --line:rgba(255,255,255,.1); --line-2:rgba(255,255,255,.16);
   --amber:#E9B84A; --amber-bg:rgba(233,184,74,.09); --amber-line:rgba(233,184,74,.4);
   --paper:#F3F3F4;
   --sans:var(--font-sans),"Manrope",system-ui,-apple-system,sans-serif; --mono:var(--font-mono),"JetBrains Mono",monospace;
