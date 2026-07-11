@@ -106,6 +106,12 @@ export function TenetApp({ user }: { user: AppUser }) {
       pendingTries.current += 1;
       const t = setTimeout(() => listMeetings().then(mergeMeetings), 1300);
       return () => clearTimeout(t);
+    } else if (persist) {
+      // Retries exhausted — almost always an ACCOUNT MISMATCH (recorded under a
+      // different sign-in). Say so instead of showing a silently empty home.
+      pendingNote.current = null;
+      window.history.replaceState(null, "", window.location.pathname);
+      showToast("Note not found here — sign in with the same account you recorded with.");
     }
   }, [meetings, persist]);
 

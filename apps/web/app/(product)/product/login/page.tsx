@@ -6,6 +6,13 @@ import { Logo } from "@/components/Logo";
 
 type Mode = "signin" | "signup";
 
+// Where to land after auth — honors ?next= (e.g. the ?n=<note> deep-link kept
+// by the middleware), rejecting anything that isn't a same-site path.
+function afterAuthUrl(): string {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -41,7 +48,7 @@ export default function LoginPage() {
 
       if (data.session) {
         // Auto-confirm on → signed in immediately.
-        window.location.assign("/");
+        window.location.assign(afterAuthUrl());
       } else {
         // Email confirmation required → tell them to check their inbox.
         setLoading(false);
@@ -57,7 +64,7 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (error) setError(error.message);
-    else window.location.assign("/");
+    else window.location.assign(afterAuthUrl());
   }
 
   async function sendMagicLink() {

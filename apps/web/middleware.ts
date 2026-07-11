@@ -61,10 +61,17 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // Preserve the destination (incl. ?n=<note> deep-links from the extension)
+    // through the login round-trip — losing it strands users on an empty home.
+    const login = new URL("/login", request.url);
+    const dest = pathname + request.nextUrl.search;
+    if (dest !== "/") login.searchParams.set("next", dest);
+    return NextResponse.redirect(login);
   }
   if (user && pathname === "/login") {
-    return NextResponse.redirect(new URL("/", request.url));
+    const next = request.nextUrl.searchParams.get("next");
+    const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+    return NextResponse.redirect(new URL(safe, request.url));
   }
   return response;
 }
