@@ -207,34 +207,16 @@ function setState(s) {
   }
 }
 
-/* ---------- login UI ---------- */
-$("swap").addEventListener("click", () => {
-  mode = mode === "signin" ? "signup" : "signin";
-  $("auth-title").textContent = mode === "signup" ? "Создать аккаунт" : "Войди в Tenet";
-  $("signin").textContent = mode === "signup" ? "Создать аккаунт" : "Войти";
-  $("swap").innerHTML = mode === "signup" ? 'Уже есть аккаунт? <u>Войти</u>' : 'Впервые тут? <u>Создать аккаунт</u>';
-  $("auth-err").textContent = "";
+/* ---------- signed-out: sign in happens ON THE SITE, the session flows back
+   to the extension automatically (externally_connectable bridge). ---------- */
+$("openapp").addEventListener("click", () => chrome.tabs.create({ url: `${APP_URL}/onboard/installed` }));
+// The bridge writes the session while the popup may be open — pick it up live.
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area !== "local" || !ch.session) return;
+  session = ch.session.newValue || null;
+  if (session?.access_token) detectSource();
+  else setState("signedout");
 });
-async function doLogin() {
-  const email = $("email").value.trim();
-  const password = $("password").value;
-  const err = $("auth-err");
-  if (!email || !password) { err.textContent = "Введи email и пароль."; return; }
-  $("signin").disabled = true;
-  err.textContent = "";
-  try {
-    session = await authRequest(email, password, mode === "signup");
-    await saveSession(session);
-    if (mode === "signup") fireWelcome(email);
-    await detectSource();
-  } catch (e) {
-    err.textContent = String(e.message || e);
-  } finally {
-    $("signin").disabled = false;
-  }
-}
-$("signin").addEventListener("click", doLogin);
-$("password").addEventListener("keydown", (e) => e.key === "Enter" && doLogin());
 
 /* ---------- settings / gear → open the web app ---------- */
 $("gear").addEventListener("click", () => chrome.tabs.create({ url: APP_URL }));

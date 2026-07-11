@@ -10,7 +10,30 @@ const LOG = (...a) => { if (DEBUG) { try { console.log("[Tenet/bg]", ...a); } ca
 
 // Retry uploads that were queued offline — on browser start and on install/update.
 chrome.runtime.onStartup.addListener(() => flushPending().catch(() => {}));
-chrome.runtime.onInstalled.addListener(() => flushPending().catch(() => {}));
+chrome.runtime.onInstalled.addListener((d) => {
+  flushPending().catch(() => {});
+  // First install → straight into the site onboarding (sign in ON the site;
+  // the session flows back here via the external-message bridge below).
+  if (d.reason === "install") chrome.tabs.create({ url: `${APP_URL}/onboard/installed` }).catch(() => {});
+});
+
+// The web app pushes the signed-in session to us (externally_connectable) —
+// the user never types a password inside the extension.
+chrome.runtime.onMessageExternal.addListener((m, sender, sendResponse) => {
+  if (m?.type !== "TENET_SESSION") return;
+  if (!sender.url || !sender.url.startsWith(APP_URL)) return;
+  const s = m.session;
+  if (!s?.access_token || !s?.refresh_token || !s?.user?.id) { sendResponse({ ok: false }); return; }
+  chrome.storage.local.set({
+    session: {
+      access_token: s.access_token,
+      refresh_token: s.refresh_token,
+      user: { id: s.user.id, email: s.user.email || "" },
+      expires_at: Number(s.expires_at) || Date.now() + 3600000,
+    },
+  }).then(() => { LOG("session adopted from the app"); sendResponse({ ok: true }); });
+  return true;
+});
 
 let recordingTabId = null;
 let lastOpened = null; // note id we already auto-opened, to avoid double tabs

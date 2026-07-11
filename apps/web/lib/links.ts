@@ -2,6 +2,10 @@
 export const CHROME_STORE_URL =
   "https://chromewebstore.google.com/detail/tenet-%E2%80%94-record-summarize/klopcnnfoiceihmohdlphcflnfifdclp";
 
+// Chrome Web Store extension id — the ExtensionBridge pushes the signed-in
+// session to it so users never sign in twice.
+export const EXTENSION_ID = "klopcnnfoiceihmohdlphcflnfifdclp";
+
 // Toggle the in-app "install the Chrome extension" prompts (Home banner + sidebar
 // link). Hidden for now — flip to true to bring them back.
 export const SHOW_EXTENSION_PROMPT = false;

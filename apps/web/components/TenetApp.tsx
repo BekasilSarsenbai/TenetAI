@@ -16,6 +16,7 @@ import {
 import { Sidebar } from "./Sidebar";
 import { InstallBanner } from "./InstallBanner";
 import { CHROME_STORE_URL, SHOW_EXTENSION_PROMPT } from "@/lib/links";
+import { ExtensionBridge } from "./ExtensionBridge";
 import { HomeView } from "./HomeView";
 import { NoteView } from "./NoteView";
 import { LiveView } from "./LiveView";
@@ -459,6 +460,7 @@ export function TenetApp({ user }: { user: AppUser }) {
               onRetry={() => retryTranscription(activeMeeting.id)}
             />
           )}
+          {persist && <ExtensionBridge />}
           <LiveView show={view === "live"} onEnd={endLive} onFinish={finishLive} />
 
           {liveAsk && (
